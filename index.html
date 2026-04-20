@@ -454,7 +454,7 @@ tbody td{padding:9px 12px;vertical-align:middle;}
     <div class="header-right">
       <div class="fecha-hoy" id="fecha-hoy"></div>
       <div class="ciclo-badge" id="ciclo-badge-header">Sin ciclo</div>
-      <div class="sync-badge desconectado" id="sync-badge" onclick="openModal('modal-firebase')"><div class="sync-dot"></div><span id="sync-label">Sin sync</span></div>
+      <div class="sync-badge desconectado" id="sync-badge" onclick="abrirFirebaseModal()" style="cursor:pointer;padding:6px 12px;font-size:.72rem;"><div class="sync-dot"></div><span id="sync-label">☁️ Sync</span></div>
     </div>
   </div>
 </header>
@@ -482,8 +482,8 @@ tbody td{padding:9px 12px;vertical-align:middle;}
   <button class="nav-btn" onclick="showSection('nfc')" id="nav-nfc">
     <span class="nav-icon">📱</span> NFC/QR
   </button>
-  <button class="nav-btn" onclick="openModal('modal-firebase')" id="nav-firebase" style="margin-left:auto;">
-    <span class="nav-icon">☁️</span> Firebase
+  <button class="nav-btn" onclick="abrirFirebaseModal()" style="margin-left:auto;background:rgba(255,255,255,0.15);border-radius:8px;margin:4px 8px 4px auto;">
+    <span class="nav-icon">☁️</span> <span id="nav-fb-label">Firebase</span>
   </button>
 </nav>
 
@@ -748,6 +748,18 @@ tbody td{padding:9px 12px;vertical-align:middle;}
 
 <!-- ===== MODALS ===== -->
 
+
+
+<!-- Floating Firebase Button -->
+<button id="fb-float-btn" onclick="abrirFirebaseModal()" style="
+  position:fixed;bottom:20px;right:20px;z-index:400;
+  width:56px;height:56px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,#1a3a8c,#1e4fc2);
+  color:white;font-size:1.4rem;cursor:pointer;
+  box-shadow:0 4px 16px rgba(26,58,140,0.5);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .2s;
+" title="Configurar Firebase">☁️</button>
 
 <!-- Modal: Firebase Config -->
 <div class="modal-overlay" id="modal-firebase">
@@ -1035,10 +1047,14 @@ function saveDB(db){
 function setSyncStatus(estado){
   const badge=document.getElementById('sync-badge');
   const label=document.getElementById('sync-label');
+  const navLabel=document.getElementById('nav-fb-label');
+  const floatBtn=document.getElementById('fb-float-btn');
   if(!badge)return;
   badge.className='sync-badge '+estado;
   const labels={desconectado:'Sin sync',conectado:'Sincronizado ✓',sincronizando:'Sincronizando...'};
-  label.textContent=labels[estado]||estado;
+  if(label)label.textContent=labels[estado]||estado;
+  if(navLabel)navLabel.textContent=estado==='conectado'?'🟢 Sync':'☁️ Firebase';
+  if(floatBtn)floatBtn.style.background=estado==='conectado'?'linear-gradient(135deg,#1d8a3c,#28a745)':'linear-gradient(135deg,#1a3a8c,#1e4fc2)';
 }
 
 function getFBConfig(){try{return JSON.parse(localStorage.getItem(FB_CONFIG_KEY));}catch{return null;}}
@@ -1169,7 +1185,30 @@ function fmtFecha(d){if(!d)return '';const p=d.split('-');if(p.length<3)return d
 function fmtFechaCorta(d){if(!d)return '';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
 function fechaHoy(){const h=new Date();return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');}
 function showNotif(msg,tipo=''){const n=document.getElementById('notif');n.textContent=msg;n.className='notif show '+(tipo||'');setTimeout(()=>{n.className='notif';},2800);}
-function openModal(id){document.getElementById(id).classList.add('open');if(id==='modal-firebase')actualizarBarraEstadoFirebase();}
+function openModal(id){
+  const el=document.getElementById(id);
+  if(!el){console.error('Modal not found:',id);return;}
+  el.classList.add('open');
+  if(id==='modal-firebase'){
+    try{actualizarBarraEstadoFirebase();}catch(e){console.error(e);}
+    // Pre-fill config if saved
+    const saved=getFBConfig();
+    const inp=document.getElementById('fb-config-input');
+    if(saved&&inp&&!inp.value)inp.value=JSON.stringify(saved,null,2);
+  }
+}
+
+function abrirFirebaseModal(){
+  try{openModal('modal-firebase');}
+  catch(e){
+    // Fallback: create simple prompt
+    const cfg=prompt('Pega tu firebaseConfig JSON:');
+    if(cfg){
+      document.getElementById('fb-config-input').value=cfg;
+      conectarFirebase();
+    }
+  }
+}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function $(id){return document.getElementById(id);}
 
@@ -1410,24 +1449,54 @@ function abrirModalNuevoCiclo(){
 }
 
 function guardarCiclo(){
-  const nombre=$('ciclo-nombre').value.trim();
-  const inicio=$('ciclo-inicio').value;
-  const fin=$('ciclo-fin').value;
-  if(!nombre||!inicio||!fin){showNotif('⚠️ Completa todos los campos','error');return;}
-  const editId=$('edit-ciclo-id').value;
-  const preset=$('ciclo-sep-preset').value;
-  
-  if(editId){
-    const idx=DB.ciclos.findIndex(c=>c.id===editId);
-    if(idx>=0){DB.ciclos[idx].nombre=nombre;DB.ciclos[idx].inicio=inicio;DB.ciclos[idx].fin=fin;}
-  }else{
-    const diasEspeciales=preset?getDiasSpecialesSEP(preset).especiales.map(e=>({fecha:e.fecha,tipo:e.tipo,descripcion:e.desc})):[];
-    const nuevoCiclo={id:genId(),nombre,inicio,fin,diasEspeciales};
-    DB.ciclos.push(nuevoCiclo);
-    if(!DB.config.cicloActivo)DB.config.cicloActivo=nuevoCiclo.id;
+  try{
+    const nombreEl=document.getElementById('ciclo-nombre');
+    const inicioEl=document.getElementById('ciclo-inicio');
+    const finEl=document.getElementById('ciclo-fin');
+    const editEl=document.getElementById('edit-ciclo-id');
+    const presetEl=document.getElementById('ciclo-sep-preset');
+    if(!nombreEl||!inicioEl||!finEl){showNotif('⚠️ Error en el formulario','error');return;}
+    const nombre=nombreEl.value.trim();
+    const inicio=inicioEl.value;
+    const fin=finEl.value;
+    const editId=editEl?editEl.value:'';
+    const preset=presetEl?presetEl.value:'';
+    if(!nombre){showNotif('⚠️ Escribe el nombre del ciclo','error');return;}
+    if(!inicio){showNotif('⚠️ Selecciona fecha de inicio','error');return;}
+    if(!fin){showNotif('⚠️ Selecciona fecha de fin','error');return;}
+    if(!DB.ciclos)DB.ciclos=[];
+    if(editId){
+      const idx=DB.ciclos.findIndex(c=>c.id===editId);
+      if(idx>=0){DB.ciclos[idx].nombre=nombre;DB.ciclos[idx].inicio=inicio;DB.ciclos[idx].fin=fin;}
+    }else{
+      let diasEspeciales=[];
+      try{
+        if(preset){const sepData=getDiasSpecialesSEP(preset);if(sepData&&sepData.especiales)diasEspeciales=sepData.especiales.map(e=>({fecha:e.fecha,tipo:e.tipo,descripcion:e.desc}));}
+      }catch(ex){console.warn('Error cargando SEP:',ex);}
+      const nuevoCiclo={id:genId(),nombre,inicio,fin,diasEspeciales};
+      DB.ciclos.push(nuevoCiclo);
+      if(!DB.config)DB.config={horaRetardo:'08:30',cicloActivo:null};
+      if(!DB.config.cicloActivo)DB.config.cicloActivo=nuevoCiclo.id;
+    }
+    // Save locally first, always
+    localStorage.setItem(DB_KEY,JSON.stringify(DB));
+    closeModal('modal-nuevo-ciclo');
+    renderCiclos();
+    updateHeader();
+    fillCicloSelects();
+    showNotif('✅ Ciclo escolar guardado','success');
+    // Then sync to Firebase without blocking
+    if(fbRef){
+      fbGuardando=true;
+      setSyncStatus('sincronizando');
+      fbRef.set(JSON.parse(JSON.stringify(DB)))
+        .then(()=>{setSyncStatus('conectado');setTimeout(()=>{fbGuardando=false;},3000);})
+        .catch(e=>{setSyncStatus('desconectado');fbGuardando=false;console.error('Firebase save error:',e);});
+    }
+  }catch(err){
+    showNotif('❌ Error: '+err.message,'error');
+    console.error('guardarCiclo error:',err);
   }
-  saveDB(DB);closeModal('modal-nuevo-ciclo');renderCiclos();updateHeader();
-  showNotif('✅ Ciclo escolar guardado','success');
 }
 
 function activarCiclo(id){DB.config.cicloActivo=id;saveDB(DB);renderCiclos();updateHeader();showNotif('✅ Ciclo activado','success');}
@@ -2478,4 +2547,15 @@ function init(){
   actualizarBarraEstadoFirebase();
 }
 
-// Close modals 
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay=>{
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open');});
+});
+
+// Keyboard escape
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
+
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
