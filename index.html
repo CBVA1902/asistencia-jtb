@@ -8,6 +8,33 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script>
+// PDF helper - ensures jsPDF is always accessible
+function getPDF(){
+  try{
+    if(window.jspdf&&window.jspdf.jsPDF)return new window.jspdf.jsPDF();
+    if(window.jsPDF)return new window.jsPDF();
+    throw new Error('jsPDF no disponible');
+  }catch(e){
+    showNotif('❌ Error al cargar PDF. Verifica tu conexión a internet.','error');
+    throw e;
+  }
+}
+function pdfHeader(doc,titulo,subtitulo){
+  doc.setFillColor(26,58,140);doc.rect(0,0,210,32,'F');
+  doc.setFillColor(192,24,30);doc.rect(0,29,210,4,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');doc.setFontSize(13);
+  doc.text('Jardín de Niños Jaime Torres Bodet · 30EJN1426K',14,11);
+  doc.setFontSize(9);
+  doc.text('Mtra. Carla Berenice Vilis Álvarez · Xochitla, Veracruz · Proceso Unitario',14,19);
+  doc.setFontSize(8);
+  if(titulo)doc.text(titulo,14,26);
+  doc.setTextColor(0,0,0);
+  if(subtitulo){doc.setFontSize(7);doc.setTextColor(120,120,120);doc.text(subtitulo,14,30);doc.setTextColor(0,0,0);}
+  return 38;
+}
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -796,6 +823,16 @@ tbody td{padding:9px 12px;vertical-align:middle;}
       ⚠️ <strong>Reglas de seguridad:</strong> En Firebase → Realtime Database → Reglas, asegúrate de tener:<br>
       <code style="background:var(--gris2);padding:2px 6px;border-radius:4px;">{ "rules": { ".read": true, ".write": true } }</code>
     </div>
+    <div style="background:var(--gris);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;">
+      <div style="font-weight:800;font-size:.82rem;color:var(--azul);margin-bottom:8px;">💾 Mis datos en este dispositivo:</div>
+      <div id="local-data-info" style="font-size:.78rem;color:var(--texto2);margin-bottom:10px;">Calculando...</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-success btn-sm" onclick="subirDatosLocalesAFirebase()">⬆️ Subir mis datos a la nube</button>
+        <button class="btn btn-warning btn-sm" onclick="descargarRespaldoJSON()">💾 Guardar respaldo</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('input-restaurar').click()">📂 Restaurar respaldo</button>
+        <input type="file" id="input-restaurar" accept=".json" style="display:none" onchange="restaurarDesdeJSON(event)">
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-danger btn-sm" onclick="desconectarFirebase()">🔌 Desconectar</button>
       <button class="btn btn-outline" onclick="closeModal('modal-firebase')">Cancelar</button>
@@ -1128,10 +1165,22 @@ function activarEscuchaFirebase(){
   fbRef.on('value',(snap)=>{
     const remoto=snap.val();
     if(remoto&&!fbGuardando){
-      DB=remoto;
-      localStorage.setItem(DB_KEY,JSON.stringify(DB));
-      setSyncStatus('conectado');
-      actualizarTodasLasVistas();
+      // NEVER overwrite local if local has MORE data
+      const localAlumnos=(DB.alumnos||[]).length;
+      const remotoAlumnos=(remoto.alumnos||[]).length;
+      const localAsist=Object.keys(DB.asistencia||{}).length;
+      const remotoAsist=Object.keys(remoto.asistencia||{}).length;
+      if(localAlumnos>remotoAlumnos||(localAlumnos===remotoAlumnos&&localAsist>remotoAsist)){
+        // Local has more data - push local to Firebase instead
+        console.log('Local tiene más datos, subiendo a Firebase...');
+        fbRef.set(JSON.parse(JSON.stringify(DB)));
+        setSyncStatus('conectado');
+      }else{
+        DB=remoto;
+        localStorage.setItem(DB_KEY,JSON.stringify(DB));
+        setSyncStatus('conectado');
+        actualizarTodasLasVistas();
+      }
     }else if(remoto){
       setSyncStatus('conectado');
     }
@@ -1191,7 +1240,7 @@ function openModal(id){
   el.classList.add('open');
   if(id==='modal-firebase'){
     try{actualizarBarraEstadoFirebase();}catch(e){console.error(e);}
-    // Pre-fill config if saved
+    try{actualizarInfoLocalModal();}catch(e){}
     const saved=getFBConfig();
     const inp=document.getElementById('fb-config-input');
     if(saved&&inp&&!inp.value)inp.value=JSON.stringify(saved,null,2);
@@ -1628,21 +1677,20 @@ function eliminarAlumno(id){
 }
 
 function exportarListaAlumnos(){
-  const cicloId=$('sel-ciclo-alumnos').value;
-  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
-  const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId).sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
-  const {jsPDF}=window.jspdf;const doc=new jsPDF();
-  doc.setFillColor(26,58,140);doc.rect(0,0,210,28,'F');
-  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(14);
-  doc.text('Jardín de Niños Jaime Torres Bodet',14,10);
-  doc.setFontSize(9);doc.text('Clave: 30EJN1426K · Xochitla, Ver. · Mtra. Carla Berenice Vilis Álvarez',14,17);
-  doc.text('Lista de Alumnos · Ciclo '+(ciclo?.nombre||'')+'  ·  Generado: '+new Date().toLocaleDateString('es-MX'),14,24);
-  doc.setTextColor(0,0,0);
-  doc.autoTable({startY:32,head:[['N°','Nombre','Grado','Fecha Nac.','CURP']],
-    body:alumnos.map((a,i)=>[i+1,a.nombre,a.grado+'° Grado',fmtFechaCorta(a.fechaNacimiento||''),a.curp||'']),
-    styles:{font:'helvetica',fontSize:9},headStyles:{fillColor:[26,58,140]},alternateRowStyles:{fillColor:[240,244,252]}});
-  doc.save('Lista_Alumnos_JTB_'+(ciclo?.nombre||'')+'.pdf');
-  showNotif('📥 PDF descargado','success');
+  try{
+    const cicloId=$('sel-ciclo-alumnos').value;
+    const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+    const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId).sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
+    if(!alumnos.length){showNotif('⚠️ No hay alumnos para exportar','error');return;}
+    const doc=getPDF();
+    let y=pdfHeader(doc,'Lista de Alumnos · Ciclo '+(ciclo?.nombre||''),'Generado: '+new Date().toLocaleDateString('es-MX'));
+    doc.autoTable({startY:y,
+      head:[['N°','Nombre','Grado','Fecha Nac.','CURP']],
+      body:alumnos.map((a,i)=>[i+1,a.nombre,a.grado+'° Grado',fmtFechaCorta(a.fechaNacimiento||''),a.curp||'']),
+      styles:{font:'helvetica',fontSize:9},headStyles:{fillColor:[26,58,140]},alternateRowStyles:{fillColor:[240,244,252]}});
+    doc.save('Lista_Alumnos_JTB_'+(ciclo?.nombre||'')+'.pdf');
+    showNotif('📥 PDF descargado','success');
+  }catch(e){showNotif('❌ Error al generar PDF: '+e.message,'error');console.error(e);}
 }
 
 // ==================== ASISTENCIA ====================
@@ -1751,38 +1799,71 @@ function renderAsistenciaLista(){
   const cicloId=$('sel-ciclo-asist').value;
   const fecha=$('fecha-asist').value;
   if(!cicloId||!fecha){return;}
+  if(!DB.ciclos||!DB.ciclos.find(c=>c.id===cicloId)){
+    $('lista-asistencia-dia').innerHTML='<div style="text-align:center;padding:30px;color:var(--texto2);"><p style="font-size:.9rem;">⚠️ Primero crea un ciclo escolar en la sección <strong>📅 Ciclos Escolares</strong></p></div>';
+    return;
+  }
   const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId&&(filtroGradoAsist==='todos'||a.grado===filtroGradoAsist))
     .sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
   const cont=$('lista-asistencia-dia');
-  if(!alumnos.length){cont.innerHTML='<p style="text-align:center;color:var(--texto2);padding:20px;font-size:.85rem;">No hay alumnos en este ciclo. Ve a la sección Alumnos para agregar.</p>';return;}
-  
-  const estadoInfo={
-    asistencia:{label:'✅ Puntual',cls:'badge-verde',rowcls:'asistencia'},
-    retardo:{label:'⏰ Retardo',cls:'badge-amarillo',rowcls:'retardo'},
-    inasistencia:{label:'❌ Falta',cls:'badge-rojo',rowcls:'inasistencia'},
-    inasistencia_justificada:{label:'📋 Justificada',cls:'badge-naranja',rowcls:'inasistencia_justificada'},
-  };
-  
+  if(!alumnos.length){
+    cont.innerHTML='<div style="text-align:center;padding:30px;color:var(--texto2);"><p style="font-size:.9rem;">No hay alumnos en este ciclo.<br>Ve a <strong>👧 Alumnos</strong> para agregar.</p></div>';
+    return;
+  }
+  if(!DB.asistencia)DB.asistencia={};
   let gradoActual='';
   cont.innerHTML=alumnos.map(a=>{
     const k=a.id+'_'+fecha;
     const rec=DB.asistencia[k];
-    const ei=rec&&estadoInfo[rec.estado]?estadoInfo[rec.estado]:null;
-    let html='';
+    const est=rec?rec.estado:'';
+    const bgCircle=a.grado==='1'?'var(--verde)':a.grado==='2'?'var(--azul2)':'var(--rojo2)';
+    const initials=a.nombre.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+    let header='';
     if(a.grado!==gradoActual){
       gradoActual=a.grado;
-      const gc={1:'verde',2:'azul',3:'rojo'};
-      html+=`<div style="margin:10px 0 4px;font-family:'Fredoka One',sans-serif;font-size:.9rem;color:var(--${gc[a.grado]||'azul'});">${a.grado}° Grado</div>`;
+      const gc={'1':'verde','2':'azul','3':'rojo'};
+      header=`<div style="margin:12px 0 6px;font-family:'Fredoka One',sans-serif;font-size:.95rem;color:var(--${gc[a.grado]||'azul'});padding-left:4px;">${a.grado}° Grado</div>`;
     }
-    const initials=a.nombre.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
-    html+=`<div class="asist-row ${ei?ei.rowcls:''}" style="cursor:pointer;" onclick="openAsistenciaModal('${a.id}','${fecha}')">
-      <div style="width:32px;height:32px;border-radius:50%;background:${a.grado==='1'?'var(--verde)':a.grado==='2'?'var(--azul2)':'var(--rojo2)'};color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.75rem;flex-shrink:0;">${initials}</div>
-      <div class="asist-nombre">${a.nombre}</div>
-      ${ei?`<span class="badge ${ei.cls}">${ei.label}</span>${rec.hora?`<span style="font-size:.68rem;color:var(--texto2);">${rec.hora}</span>`:''}`:'<span class="badge badge-gris">Sin registro</span>'}
-      <span style="font-size:1rem;opacity:.4;">›</span>
+    const rowBg=est==='asistencia'?'#edfff4':est==='retardo'?'#fffbea':est==='inasistencia'?'#fff0f0':est==='inasistencia_justificada'?'#fff5ee':'white';
+    const row=`<div style="background:${rowBg};border-radius:12px;padding:10px 12px;margin-bottom:6px;box-shadow:0 2px 6px rgba(0,0,0,.06);display:flex;align-items:center;gap:10px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:${bgCircle};color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.78rem;flex-shrink:0;">${initials}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nombre}</div>
+        ${rec&&rec.hora?`<div style="font-size:.68rem;color:var(--texto2);">Hora: ${rec.hora}${rec.nota?' · '+rec.nota:''}</div>`:''}
+      </div>
+      <div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        <button onclick="registrarRapido('${a.id}','${fecha}','asistencia')" style="padding:6px 10px;border-radius:8px;border:2px solid ${est==='asistencia'?'#1d8a3c':'#ccc'};background:${est==='asistencia'?'#1d8a3c':'white'};color:${est==='asistencia'?'white':'#666'};font-size:.8rem;cursor:pointer;font-weight:700;min-width:36px;" title="Asistencia">✅</button>
+        <button onclick="registrarRapido('${a.id}','${fecha}','retardo')" style="padding:6px 10px;border-radius:8px;border:2px solid ${est==='retardo'?'#f0a500':'#ccc'};background:${est==='retardo'?'#f0a500':'white'};color:${est==='retardo'?'white':'#666'};font-size:.8rem;cursor:pointer;font-weight:700;min-width:36px;" title="Retardo">⏰</button>
+        <button onclick="registrarRapido('${a.id}','${fecha}','inasistencia')" style="padding:6px 10px;border-radius:8px;border:2px solid ${est==='inasistencia'?'#c0181e':'#ccc'};background:${est==='inasistencia'?'#c0181e':'white'};color:${est==='inasistencia'?'white':'#666'};font-size:.8rem;cursor:pointer;font-weight:700;min-width:36px;" title="Falta">❌</button>
+        <button onclick="registrarRapido('${a.id}','${fecha}','inasistencia_justificada')" style="padding:6px 10px;border-radius:8px;border:2px solid ${est==='inasistencia_justificada'?'#e06820':'#ccc'};background:${est==='inasistencia_justificada'?'#e06820':'white'};color:${est==='inasistencia_justificada'?'white':'#666'};font-size:.8rem;cursor:pointer;font-weight:700;min-width:36px;" title="Justificada">📋</button>
+        <button onclick="openAsistenciaModal('${a.id}','${fecha}')" style="padding:6px 8px;border-radius:8px;border:2px solid #ccc;background:white;color:#666;font-size:.75rem;cursor:pointer;" title="Más opciones">✏️</button>
+      </div>
     </div>`;
-    return html;
+    return header+row;
   }).join('');
+}
+
+function registrarRapido(alumnoId,fecha,estado){
+  if(!DB.asistencia)DB.asistencia={};
+  const k=alumnoId+'_'+fecha;
+  const horaActual=new Date().toTimeString().slice(0,5);
+  // Toggle: if already same state, remove
+  if(DB.asistencia[k]&&DB.asistencia[k].estado===estado){
+    delete DB.asistencia[k];
+  }else{
+    DB.asistencia[k]={estado,hora:horaActual,justificacion:'',nota:''};
+  }
+  // Save local immediately
+  localStorage.setItem(DB_KEY,JSON.stringify(DB));
+  renderAsistenciaLista();
+  renderResumenDia();
+  // Sync to Firebase without blocking
+  if(fbRef){
+    fbGuardando=true;
+    fbRef.set(JSON.parse(JSON.stringify(DB)))
+      .then(()=>{setSyncStatus('conectado');setTimeout(()=>{fbGuardando=false;},2000);})
+      .catch(e=>{fbGuardando=false;console.error(e);});
+  }
 }
 
 function openAsistenciaModal(alumnoId,fecha){
@@ -1825,9 +1906,21 @@ function guardarAsistenciaInd(){
   const hora=$('asist-hora-llegada').value;
   const justificacion=$('asist-justificacion').value;
   const nota=$('asist-nota').value;
+  if(!DB.asistencia)DB.asistencia={};
   DB.asistencia[alumnoId+'_'+fecha]={estado:estadoSeleccionado,hora,justificacion,nota};
-  saveDB(DB);closeModal('modal-asistencia-ind');renderAsistenciaLista();renderResumenDia();
+  // Save local first
+  localStorage.setItem(DB_KEY,JSON.stringify(DB));
+  closeModal('modal-asistencia-ind');
+  renderAsistenciaLista();
+  renderResumenDia();
   showNotif('✅ Asistencia guardada','success');
+  // Sync Firebase
+  if(fbRef){
+    fbGuardando=true;
+    fbRef.set(JSON.parse(JSON.stringify(DB)))
+      .then(()=>{setSyncStatus('conectado');setTimeout(()=>{fbGuardando=false;},2000);})
+      .catch(e=>{fbGuardando=false;console.error(e);});
+  }
 }
 
 function borrarAsistencia(){
@@ -1874,27 +1967,32 @@ function guardarConfigHora(){
 }
 
 function exportarAsistenciaDia(){
-  const cicloId=$('sel-ciclo-asist').value;
-  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
-  const fecha=$('fecha-asist').value;
-  const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId).sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
-  const {jsPDF}=window.jspdf;const doc=new jsPDF();
-  doc.setFillColor(26,58,140);doc.rect(0,0,210,28,'F');
-  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(13);
-  doc.text('Jardín de Niños Jaime Torres Bodet · 30EJN1426K',14,10);
-  doc.setFontSize(9);doc.text('Registro de Asistencia · '+fmtFecha(fecha)+' · Ciclo '+(ciclo?.nombre||''),14,18);
-  doc.text('Mtra. Carla Berenice Vilis Álvarez · Xochitla, Ver.',14,24);
-  doc.setTextColor(0,0,0);
-  const estadoLabel={asistencia:'Puntual',retardo:'Retardo',inasistencia:'Falta',inasistencia_justificada:'Just.'};
-  doc.autoTable({startY:32,
-    head:[['N°','Nombre','Grado','Estado','Hora','Observaciones']],
-    body:alumnos.map((a,i)=>{
-      const r=DB.asistencia[a.id+'_'+fecha];
-      return[i+1,a.nombre,a.grado+'°',r?estadoLabel[r.estado]||r.estado:'Sin registro',r?.hora||'',r?.nota||''];
-    }),
-    styles:{fontSize:8},headStyles:{fillColor:[26,58,140]},alternateRowStyles:{fillColor:[240,244,252]}
-  });
-  doc.save('Asistencia_JTB_'+fecha+'.pdf');showNotif('📥 PDF descargado','success');
+  try{
+    const cicloId=$('sel-ciclo-asist').value;
+    const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+    const fecha=$('fecha-asist').value;
+    if(!fecha){showNotif('⚠️ Selecciona una fecha','error');return;}
+    const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId).sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
+    if(!alumnos.length){showNotif('⚠️ No hay alumnos para exportar','error');return;}
+    const doc=getPDF();
+    let y=pdfHeader(doc,'Registro de Asistencia · '+fmtFecha(fecha)+' · Ciclo '+(ciclo?.nombre||''),'Generado: '+new Date().toLocaleDateString('es-MX'));
+    const estadoLabel={asistencia:'✓ Puntual',retardo:'⏰ Retardo',inasistencia:'✗ Falta',inasistencia_justificada:'Justificada'};
+    let pA=0,pR=0,pF=0,pJ=0;
+    const rows=alumnos.map((a,i)=>{
+      const r=(DB.asistencia||{})[a.id+'_'+fecha];
+      if(r){if(r.estado==='asistencia')pA++;else if(r.estado==='retardo')pR++;else if(r.estado==='inasistencia')pF++;else pJ++;}
+      return[i+1,a.nombre,a.grado+'°',r?estadoLabel[r.estado]||r.estado:'Sin registro',r&&r.hora?r.hora:'',r&&r.nota?r.nota:''];
+    });
+    doc.autoTable({startY:y,
+      head:[['N°','Nombre del Alumno','Grado','Estado','Hora','Observaciones']],
+      body:rows,
+      styles:{fontSize:8},headStyles:{fillColor:[26,58,140]},alternateRowStyles:{fillColor:[240,244,252]},
+      foot:[['','','',`✓ ${pA}  ⏰ ${pR}  ✗ ${pF}  Just. ${pJ}`,'','']],
+      footStyles:{fillColor:[220,228,248],fontStyle:'bold',fontSize:8}
+    });
+    doc.save('Asistencia_JTB_'+fecha+'.pdf');
+    showNotif('📥 PDF descargado','success');
+  }catch(e){showNotif('❌ Error al generar PDF: '+e.message,'error');console.error(e);}
 }
 
 // ==================== CALENDARIO ESCOLAR ====================
@@ -2254,99 +2352,77 @@ function renderAlumnoPorMes(){
 }
 
 function exportarAlumnoPorMesPDF(){
-  const alumnoId=$('sel-alumno-mes').value;
-  if(!alumnoId){showNotif('⚠️ Selecciona un alumno','error');return;}
-  const cicloId=$('sel-ciclo-rep').value;
-  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
-  const alumno=DB.alumnos.find(a=>a.id===alumnoId);
-  if(!alumno)return;
-  const meses=getStatsPorMesAlumno(alumnoId,cicloId);
-  const {jsPDF}=window.jspdf;const doc=new jsPDF();
-  doc.setFillColor(26,58,140);doc.rect(0,0,210,38,'F');
-  doc.setFillColor(192,24,30);doc.rect(0,35,210,5,'F');
-  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(14);
-  doc.text('Jardín de Niños Jaime Torres Bodet · 30EJN1426K',14,12);
-  doc.setFontSize(9);doc.text('Mtra. Carla Berenice Vilis Álvarez · Xochitla, Veracruz',14,20);
-  doc.text('Reporte Individual de Asistencia por Mes · Ciclo '+(ciclo?.nombre||''),14,27);
-  doc.text('Generado: '+new Date().toLocaleDateString('es-MX'),14,34);
-  doc.setTextColor(0,0,0);
-  let y=46;
-  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(26,58,140);
-  doc.text('ALUMNO: '+alumno.nombre,14,y);y+=5;
-  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(80,80,80);
-  doc.text('Grado: '+alumno.grado+'° · Ciclo: '+(ciclo?.nombre||''),14,y);y+=8;
-  const totA=meses.reduce((s,m)=>s+m.asistencia,0);
-  const totR=meses.reduce((s,m)=>s+m.retardo,0);
-  const totF=meses.reduce((s,m)=>s+m.inasistencia,0);
-  const totJ=meses.reduce((s,m)=>s+m.justificada,0);
-  const totT=totA+totR+totF+totJ;
-  const pct=totT?Math.round((totA+totR)/totT*100):0;
-  doc.setTextColor(0,0,0);doc.setFont('helvetica','bold');doc.setFontSize(9);
-  doc.text(`Resumen: Asistencias ${totA} | Retardos ${totR} | Faltas ${totF} | Justificadas ${totJ} | % Asistencia ${pct}%`,14,y);y+=8;
-  doc.autoTable({startY:y,
-    head:[['Mes','Asistencias','Retardos','Faltas','Justificadas','Total días','% Asistencia','Indicador']],
-    body:meses.map(m=>{
-      const t=m.asistencia+m.retardo+m.inasistencia+m.justificada;
-      const p=t?Math.round((m.asistencia+m.retardo)/t*100):null;
-      const ind=p===null?'—':p>=90?'Excelente':p>=75?'Regular':'Riesgo';
-      return[m.label,m.asistencia,m.retardo,m.inasistencia,m.justificada,t||0,p!==null?p+'%':'—',ind];
-    }),
-    foot:[['TOTAL',totA,totR,totF,totJ,totT,pct+'%',pct>=90?'Excelente':pct>=75?'Regular':'Riesgo']],
-    styles:{fontSize:8},headStyles:{fillColor:[26,58,140]},footStyles:{fillColor:[220,228,248],fontStyle:'bold'},
-    alternateRowStyles:{fillColor:[245,248,255]}
-  });
-  doc.save('Reporte_'+alumno.nombre.replace(/\s+/g,'_')+'_'+ciclo?.nombre+'.pdf');
-  showNotif('📥 PDF descargado','success');
+  try{
+    const alumnoId=$('sel-alumno-mes').value;
+    if(!alumnoId){showNotif('⚠️ Selecciona un alumno','error');return;}
+    const cicloId=$('sel-ciclo-rep').value;
+    const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+    const alumno=DB.alumnos.find(a=>a.id===alumnoId);
+    if(!alumno){showNotif('⚠️ Alumno no encontrado','error');return;}
+    const meses=getStatsPorMesAlumno(alumnoId,cicloId);
+    const doc=getPDF();
+    let y=pdfHeader(doc,
+      'Reporte Individual · '+alumno.nombre+' · '+alumno.grado+'° Grado',
+      'Ciclo: '+(ciclo?.nombre||'')+'   Generado: '+new Date().toLocaleDateString('es-MX'));
+    const totA=meses.reduce((s,m)=>s+m.asistencia,0);
+    const totR=meses.reduce((s,m)=>s+m.retardo,0);
+    const totF=meses.reduce((s,m)=>s+m.inasistencia,0);
+    const totJ=meses.reduce((s,m)=>s+m.justificada,0);
+    const totT=totA+totR+totF+totJ;
+    const pct=totT?Math.round((totA+totR)/totT*100):0;
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(26,58,140);
+    doc.text(`Resumen: Asistencias ${totA}  Retardos ${totR}  Faltas ${totF}  Justificadas ${totJ}  % Asistencia ${pct}%`,14,y);
+    y+=6;doc.setTextColor(0,0,0);
+    doc.autoTable({startY:y,
+      head:[['Mes','Asistencias','Retardos','Faltas','Justif.','Total','% Asist.','Indicador']],
+      body:meses.map(m=>{
+        const t=m.asistencia+m.retardo+m.inasistencia+m.justificada;
+        const p=t?Math.round((m.asistencia+m.retardo)/t*100):null;
+        return[m.label,m.asistencia,m.retardo,m.inasistencia,m.justificada,t||0,p!==null?p+'%':'—',p===null?'—':p>=90?'Excelente':p>=75?'Regular':'Riesgo'];
+      }),
+      foot:[['TOTAL',totA,totR,totF,totJ,totT,pct+'%',pct>=90?'Excelente':pct>=75?'Regular':'Riesgo']],
+      styles:{fontSize:8},headStyles:{fillColor:[26,58,140]},
+      alternateRowStyles:{fillColor:[240,244,252]},
+      footStyles:{fillColor:[220,228,248],fontStyle:'bold',fontSize:8}
+    });
+    doc.save('Reporte_'+alumno.nombre.replace(/\s+/g,'_')+'_'+(ciclo?.nombre||'')+'.pdf');
+    showNotif('📥 PDF descargado','success');
+  }catch(e){showNotif('❌ Error al generar PDF: '+e.message,'error');console.error(e);}
 }
 
 function exportarReportePDF(){
-  const cicloId=$('sel-ciclo-rep').value;
-  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
-  const gradoFiltro=$('sel-grado-rep').value;
-  const alumnos=getAlumnosFiltrados().sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
-  const {jsPDF}=window.jspdf;const doc=new jsPDF();
-  
-  // Header
-  doc.setFillColor(26,58,140);doc.rect(0,0,210,38,'F');
-  doc.setFillColor(192,24,30);doc.rect(0,35,210,5,'F');
-  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(15);
-  doc.text('Jardín de Niños Jaime Torres Bodet',14,12);
-  doc.setFontSize(9);doc.text('Clave: 30EJN1426K · Xochitla, Veracruz · Proceso Unitario',14,20);
-  doc.text('Mtra. Carla Berenice Vilis Álvarez',14,27);
-  doc.setFontSize(8);doc.text('Reporte de Asistencia · Ciclo '+(ciclo?.nombre||'')+(gradoFiltro?' · '+gradoFiltro+'° Grado':''),14,33);
-  doc.setTextColor(0,0,0);
-  
-  // Reporte PMC
-  let y=48;
-  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(26,58,140);
-  doc.text('REPORTE DE ASISTENCIA - PROCESO DE MEJORA CONTINUA (PMC)',14,y);
-  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,100,100);
-  y+=5;doc.text('Nueva Escuela Mexicana (NEM) · Generado: '+new Date().toLocaleDateString('es-MX'),14,y);
-  y+=8;
-  
-  const stats=alumnos.map(a=>({a,s:getAsistenciaStats(a.id,cicloId)}));
-  let ta=0,tf=0,tr=0,tTotal=0;
-  stats.forEach(x=>{ta+=x.s.asistencia;tf+=x.s.inasistencia+x.s.justificada;tr+=x.s.retardo;tTotal+=x.s.total;});
-  
-  doc.setFontSize(10);doc.setTextColor(0,0,0);
-  doc.setFont('helvetica','bold');doc.text('RESUMEN GENERAL DEL CICLO:',14,y);y+=6;
-  doc.setFont('helvetica','normal');doc.setFontSize(9);
-  doc.text('• Total de registros: '+tTotal+'  |  Asistencias: '+ta+'  |  Faltas: '+tf+'  |  Retardos: '+tr,14,y);y+=5;
-  doc.text('• Porcentaje de asistencia: '+(tTotal?Math.round((ta+tr)/tTotal*100):0)+'%  |  Total alumnos: '+alumnos.length,14,y);y+=8;
-  
-  doc.autoTable({startY:y,
-    head:[['N°','Nombre del Alumno','Grado','Asistencias','Retardos','Faltas','Justif.','% Asistencia']],
-    body:stats.map((x,i)=>{
-      const pct=x.s.total?Math.round((x.s.asistencia+x.s.retardo)/x.s.total*100):0;
-      return[i+1,x.a.nombre,x.a.grado+'°',x.s.asistencia,x.s.retardo,x.s.inasistencia,x.s.justificada,pct+'%'];
-    }),
-    styles:{fontSize:8,font:'helvetica'},headStyles:{fillColor:[26,58,140],fontSize:8},
-    alternateRowStyles:{fillColor:[240,244,252]},
-    columnStyles:{7:{halign:'center'}}
-  });
-  
-  doc.save('Reporte_PMC_JTB_'+(ciclo?.nombre||'')+'.pdf');
-  showNotif('📥 Reporte PDF descargado','success');
+  try{
+    const cicloId=$('sel-ciclo-rep').value;
+    const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+    const gradoFiltro=$('sel-grado-rep').value;
+    const alumnos=getAlumnosFiltrados().sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
+    if(!alumnos.length){showNotif('⚠️ No hay datos para exportar','error');return;}
+    const doc=getPDF();
+    let y=pdfHeader(doc,
+      'Reporte de Asistencia · PMC · Ciclo '+(ciclo?.nombre||'')+(gradoFiltro?' · '+gradoFiltro+'° Grado':''),
+      'Nueva Escuela Mexicana (NEM) · Generado: '+new Date().toLocaleDateString('es-MX'));
+    const stats=alumnos.map(a=>({a,s:getAsistenciaStats(a.id,cicloId)}));
+    let ta=0,tf=0,tr=0,tTotal=0;
+    stats.forEach(x=>{ta+=x.s.asistencia;tf+=x.s.inasistencia+x.s.justificada;tr+=x.s.retardo;tTotal+=x.s.total;});
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(26,58,140);
+    doc.text('RESUMEN GENERAL DEL CICLO ESCOLAR',14,y);y+=5;
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(60,60,60);
+    doc.text(`Total alumnos: ${alumnos.length}   Asistencias: ${ta}   Faltas: ${tf}   Retardos: ${tr}   % Asistencia: ${tTotal?Math.round((ta+tr)/tTotal*100):0}%`,14,y);y+=6;
+    doc.setTextColor(0,0,0);
+    doc.autoTable({startY:y,
+      head:[['N°','Nombre del Alumno','Grado','Asist.','Retardos','Faltas','Justif.','% Asist.']],
+      body:stats.map((x,i)=>{
+        const pct=x.s.total?Math.round((x.s.asistencia+x.s.retardo)/x.s.total*100):0;
+        return[i+1,x.a.nombre,x.a.grado+'°',x.s.asistencia,x.s.retardo,x.s.inasistencia,x.s.justificada,pct+'%'];
+      }),
+      styles:{fontSize:8},headStyles:{fillColor:[26,58,140]},
+      alternateRowStyles:{fillColor:[240,244,252]},
+      foot:[['','TOTALES','',ta,tr,tf,'',tTotal?Math.round((ta+tr)/tTotal*100)+'%':'—']],
+      footStyles:{fillColor:[220,228,248],fontStyle:'bold',fontSize:8}
+    });
+    doc.save('Reporte_PMC_JTB_'+(ciclo?.nombre||'')+'.pdf');
+    showNotif('📥 Reporte PDF descargado','success');
+  }catch(e){showNotif('❌ Error al generar PDF: '+e.message,'error');console.error(e);}
 }
 
 // ==================== NFC / QR ====================
@@ -2529,6 +2605,78 @@ function handleNFCScan(nfcIdOrData){
     if($('scanner-result'))$('scanner-result').innerHTML=`<div style="padding:12px;"><span style="color:var(--verde);font-weight:700;font-size:.9rem;">✅ ${alumno.nombre}</span><br><span style="font-size:.75rem;color:var(--texto2);">${esRetardo?'⏰ Retardo':'Puntual'} · ${horaActual}</span></div>`;
     renderAsistenciaLista();renderResumenDia();
   }else{showNotif('⚠️ Alumno no encontrado','error');}
+}
+
+
+// ==================== RESCATE Y RESPALDO ====================
+function actualizarInfoLocalModal(){
+  const el=document.getElementById('local-data-info');
+  if(!el)return;
+  const ciclos=(DB.ciclos||[]).length;
+  const alumnos=(DB.alumnos||[]).length;
+  const asist=Object.keys(DB.asistencia||{}).length;
+  el.innerHTML=`
+    <span style="margin-right:12px;">📅 Ciclos: <strong>${ciclos}</strong></span>
+    <span style="margin-right:12px;">👧 Alumnos: <strong>${alumnos}</strong></span>
+    <span>✅ Registros de asistencia: <strong>${asist}</strong></span>`;
+}
+
+function subirDatosLocalesAFirebase(){
+  if(!fbRef){showNotif('⚠️ Primero conecta Firebase','error');return;}
+  if(!confirm('¿Subir todos los datos de ESTE dispositivo a la nube? Esto reemplazará los datos en Firebase.'))return;
+  fbGuardando=true;
+  setSyncStatus('sincronizando');
+  fbRef.set(JSON.parse(JSON.stringify(DB)))
+    .then(()=>{
+      setSyncStatus('conectado');
+      setTimeout(()=>{fbGuardando=false;},3000);
+      showNotif('✅ Datos subidos a la nube correctamente','success');
+      closeModal('modal-firebase');
+    })
+    .catch(e=>{
+      fbGuardando=false;
+      setSyncStatus('desconectado');
+      showNotif('❌ Error al subir: '+e.message,'error');
+    });
+}
+
+function descargarRespaldoJSON(){
+  const datos=JSON.stringify(DB,null,2);
+  const blob=new Blob([datos],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='Respaldo_JTB_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotif('💾 Respaldo descargado','success');
+}
+
+function restaurarDesdeJSON(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const datos=JSON.parse(e.target.result);
+      if(!datos.ciclos&&!datos.alumnos){showNotif('⚠️ Archivo inválido','error');return;}
+      if(!confirm('¿Restaurar datos desde este archivo? Se reemplazarán los datos actuales.'))return;
+      DB=datos;
+      localStorage.setItem(DB_KEY,JSON.stringify(DB));
+      actualizarTodasLasVistas();
+      showNotif('✅ Datos restaurados: '+( datos.alumnos||[]).length+' alumnos','success');
+      // Also push to Firebase
+      if(fbRef){
+        fbGuardando=true;
+        fbRef.set(JSON.parse(JSON.stringify(DB)))
+          .then(()=>{setSyncStatus('conectado');setTimeout(()=>{fbGuardando=false;},3000);})
+          .catch(e=>{fbGuardando=false;});
+      }
+      closeModal('modal-firebase');
+    }catch(err){showNotif('❌ Error al leer archivo: '+err.message,'error');}
+  };
+  reader.readAsText(file);
+  event.target.value='';
 }
 
 // ==================== INIT ====================
