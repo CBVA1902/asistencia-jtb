@@ -530,7 +530,7 @@ tbody td{padding:9px 12px;vertical-align:middle;}
 <div id="section-ciclos" class="section">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
     <h2 style="font-family:'Fredoka One',sans-serif;font-size:1.3rem;color:var(--azul);">📅 Ciclos Escolares</h2>
-    <button class="btn btn-primary" onclick="openModal('modal-nuevo-ciclo')">➕ Nuevo Ciclo</button>
+    <button class="btn btn-primary" onclick="abrirModalNuevoCiclo()">➕ Nuevo Ciclo</button>
   </div>
   <div id="lista-ciclos">
     <p style="color:var(--texto2);font-size:.85rem;padding:20px;text-align:center;">No hay ciclos escolares registrados.</p>
@@ -1016,7 +1016,7 @@ tbody td{padding:9px 12px;vertical-align:middle;}
 // ==================== DATA ====================
 const DB_KEY='jtb_asistencia_v2';
 const FB_CONFIG_KEY='jtb_firebase_config';
-let fbApp=null;let fbDb=null;let fbRef=null;let fbEscuchando=false;
+let fbApp=null;let fbDb=null;let fbRef=null;let fbEscuchando=false;let fbGuardando=false;
 
 function loadDB(){try{return JSON.parse(localStorage.getItem(DB_KEY))||getEmptyDB();}catch{return getEmptyDB();}}
 function getEmptyDB(){return{ciclos:[],alumnos:[],asistencia:{},ausenciasDocente:{},config:{horaRetardo:'08:30',cicloActivo:null}};}
@@ -1024,10 +1024,11 @@ function getEmptyDB(){return{ciclos:[],alumnos:[],asistencia:{},ausenciasDocente
 function saveDB(db){
   localStorage.setItem(DB_KEY,JSON.stringify(db));
   if(fbRef){
+    fbGuardando=true;
     setSyncStatus('sincronizando');
-    fbRef.set(db)
-      .then(()=>setSyncStatus('conectado'))
-      .catch(e=>{setSyncStatus('desconectado');showNotif('⚠️ Error al guardar en nube','error');console.error(e);});
+    fbRef.set(JSON.parse(JSON.stringify(db)))
+      .then(()=>{setSyncStatus('conectado');setTimeout(()=>{fbGuardando=false;},2000);})
+      .catch(e=>{setSyncStatus('desconectado');fbGuardando=false;showNotif('⚠️ Error al guardar en nube','error');console.error(e);});
   }
 }
 
@@ -1110,11 +1111,13 @@ function activarEscuchaFirebase(){
   fbEscuchando=true;
   fbRef.on('value',(snap)=>{
     const remoto=snap.val();
-    if(remoto){
+    if(remoto&&!fbGuardando){
       DB=remoto;
       localStorage.setItem(DB_KEY,JSON.stringify(DB));
       setSyncStatus('conectado');
       actualizarTodasLasVistas();
+    }else if(remoto){
+      setSyncStatus('conectado');
     }
   },(e)=>{
     setSyncStatus('desconectado');
@@ -1389,6 +1392,15 @@ function renderCiclos(){
 }
 
 function openModal_nuevoCiclo(){
+  $('edit-ciclo-id').value='';
+  $('ciclo-nombre').value='';
+  $('ciclo-inicio').value='';
+  $('ciclo-fin').value='';
+  $('ciclo-sep-preset').value='';
+  openModal('modal-nuevo-ciclo');
+}
+
+function abrirModalNuevoCiclo(){
   $('edit-ciclo-id').value='';
   $('ciclo-nombre').value='';
   $('ciclo-inicio').value='';
@@ -2466,15 +2478,4 @@ function init(){
   actualizarBarraEstadoFirebase();
 }
 
-// Close modals on overlay click
-document.querySelectorAll('.modal-overlay').forEach(overlay=>{
-  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open');});
-});
-
-// Keyboard escape
-document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
-
-window.addEventListener('load',init);
-</script>
-</body>
-</html>
+// Close modals 
