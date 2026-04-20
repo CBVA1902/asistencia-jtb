@@ -9,6 +9,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 :root{
   --azul:#1a3a8c;--azul2:#1e4fc2;--rojo:#c0181e;--rojo2:#e02027;
@@ -413,6 +415,29 @@ tbody td{padding:9px 12px;vertical-align:middle;}
   background-repeat: no-repeat;
 }
 
+
+/* FIREBASE SYNC */
+.sync-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:20px;font-size:.65rem;font-weight:700;
+  margin-top:3px;cursor:pointer;transition:all .2s;
+}
+.sync-badge.desconectado{background:rgba(192,24,30,.3);border:1px solid rgba(192,24,30,.5);}
+.sync-badge.conectado{background:rgba(29,138,60,.3);border:1px solid rgba(29,138,60,.5);}
+.sync-badge.sincronizando{background:rgba(240,165,0,.3);border:1px solid rgba(240,165,0,.5);}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sync-badge.desconectado .sync-dot{background:#ff6b6b;}
+.sync-badge.conectado .sync-dot{background:#51cf66;animation:pulse-dot 2s infinite;}
+.sync-badge.sincronizando .sync-dot{background:#fcc419;animation:pulse-dot .5s infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:.3;}}
+.fb-setup-hint{
+  background:linear-gradient(135deg,#f0a500,#e06820);
+  color:white;border-radius:var(--radius-sm);padding:14px 18px;
+  margin-bottom:16px;display:flex;align-items:center;gap:12px;
+}
+.fb-setup-hint h4{font-family:'Fredoka One',sans-serif;font-size:1rem;margin-bottom:3px;}
+.fb-setup-hint p{font-size:.75rem;opacity:.9;line-height:1.4;}
+
 </style>
 </head>
 <body>
@@ -429,6 +454,7 @@ tbody td{padding:9px 12px;vertical-align:middle;}
     <div class="header-right">
       <div class="fecha-hoy" id="fecha-hoy"></div>
       <div class="ciclo-badge" id="ciclo-badge-header">Sin ciclo</div>
+      <div class="sync-badge desconectado" id="sync-badge" onclick="openModal('modal-firebase')"><div class="sync-dot"></div><span id="sync-label">Sin sync</span></div>
     </div>
   </div>
 </header>
@@ -455,6 +481,9 @@ tbody td{padding:9px 12px;vertical-align:middle;}
   </button>
   <button class="nav-btn" onclick="showSection('nfc')" id="nav-nfc">
     <span class="nav-icon">📱</span> NFC/QR
+  </button>
+  <button class="nav-btn" onclick="openModal('modal-firebase')" id="nav-firebase" style="margin-left:auto;">
+    <span class="nav-icon">☁️</span> Firebase
   </button>
 </nav>
 
@@ -719,6 +748,50 @@ tbody td{padding:9px 12px;vertical-align:middle;}
 
 <!-- ===== MODALS ===== -->
 
+
+<!-- Modal: Firebase Config -->
+<div class="modal-overlay" id="modal-firebase">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <div class="modal-title">☁️ Configuración Firebase (Sincronización)</div>
+      <button class="modal-close" onclick="closeModal('modal-firebase')">✕</button>
+    </div>
+    <div id="firebase-estado-bar" style="margin-bottom:14px;"></div>
+    <div style="background:var(--gris);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;font-size:.8rem;line-height:1.7;color:var(--texto2);">
+      <strong style="color:var(--azul);">📋 Pasos para obtener tu configuración Firebase:</strong><br>
+      1. Ve a <a href="https://console.firebase.google.com" target="_blank" style="color:var(--azul2);font-weight:700;">console.firebase.google.com</a><br>
+      2. Clic en <strong>"Agregar proyecto"</strong> → nombre: <em>Asistencia JTB</em> → desactiva Analytics → Crear<br>
+      3. En el menú izquierdo: <strong>Compilar → Realtime Database → Crear base de datos</strong><br>
+      4. Elige ubicación <strong>us-central1</strong> → Modo de prueba → Habilitar<br>
+      5. Clic ⚙️ junto a "Descripción general del proyecto" → <strong>Configuración del proyecto</strong><br>
+      6. Baja hasta "Tus apps" → clic ícono <strong>&lt;/&gt;</strong> → pon nombre <em>JTBApp</em> → Registrar<br>
+      7. Copia todo el objeto <code>firebaseConfig = { ... }</code> y pégalo abajo
+    </div>
+    <div class="form-group">
+      <label>📋 Pega aquí tu configuración Firebase (firebaseConfig)</label>
+      <textarea class="form-control" id="fb-config-input" rows="9" placeholder='Pega aquí, ejemplo:
+{
+  "apiKey": "AIzaSy...",
+  "authDomain": "mi-proyecto.firebaseapp.com",
+  "databaseURL": "https://mi-proyecto-default-rtdb.firebaseio.com",
+  "projectId": "mi-proyecto",
+  "storageBucket": "mi-proyecto.appspot.com",
+  "messagingSenderId": "123456789",
+  "appId": "1:123456789:web:abc..."
+}' style="font-family:monospace;font-size:.75rem;"></textarea>
+    </div>
+    <div style="font-size:.72rem;color:var(--texto2);margin-bottom:12px;">
+      ⚠️ <strong>Reglas de seguridad:</strong> En Firebase → Realtime Database → Reglas, asegúrate de tener:<br>
+      <code style="background:var(--gris2);padding:2px 6px;border-radius:4px;">{ "rules": { ".read": true, ".write": true } }</code>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="desconectarFirebase()">🔌 Desconectar</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-firebase')">Cancelar</button>
+      <button class="btn btn-primary" onclick="conectarFirebase()">☁️ Conectar y Sincronizar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Nuevo Ciclo -->
 <div class="modal-overlay" id="modal-nuevo-ciclo">
   <div class="modal">
@@ -942,9 +1015,149 @@ tbody td{padding:9px 12px;vertical-align:middle;}
 // Logo embedded directly in HTML img src
 // ==================== DATA ====================
 const DB_KEY='jtb_asistencia_v2';
+const FB_CONFIG_KEY='jtb_firebase_config';
+let fbApp=null;let fbDb=null;let fbRef=null;let fbEscuchando=false;
+
 function loadDB(){try{return JSON.parse(localStorage.getItem(DB_KEY))||getEmptyDB();}catch{return getEmptyDB();}}
-function saveDB(db){localStorage.setItem(DB_KEY,JSON.stringify(db));}
 function getEmptyDB(){return{ciclos:[],alumnos:[],asistencia:{},ausenciasDocente:{},config:{horaRetardo:'08:30',cicloActivo:null}};}
+
+function saveDB(db){
+  localStorage.setItem(DB_KEY,JSON.stringify(db));
+  if(fbRef){
+    setSyncStatus('sincronizando');
+    fbRef.set(db)
+      .then(()=>setSyncStatus('conectado'))
+      .catch(e=>{setSyncStatus('desconectado');showNotif('⚠️ Error al guardar en nube','error');console.error(e);});
+  }
+}
+
+function setSyncStatus(estado){
+  const badge=document.getElementById('sync-badge');
+  const label=document.getElementById('sync-label');
+  if(!badge)return;
+  badge.className='sync-badge '+estado;
+  const labels={desconectado:'Sin sync',conectado:'Sincronizado ✓',sincronizando:'Sincronizando...'};
+  label.textContent=labels[estado]||estado;
+}
+
+function getFBConfig(){try{return JSON.parse(localStorage.getItem(FB_CONFIG_KEY));}catch{return null;}}
+
+function conectarFirebase(){
+  const raw=document.getElementById('fb-config-input').value.trim();
+  let config;
+  try{
+    // Accept both with and without variable name
+    const clean=raw.replace(/^.*?firebaseConfig\s*=\s*/,'').replace(/;?\s*$/,'');
+    config=JSON.parse(clean);
+  }catch(e){
+    try{config=JSON.parse(raw);}
+    catch(e2){showNotif('⚠️ Formato inválido. Verifica que sea JSON correcto','error');return;}
+  }
+  if(!config.databaseURL){showNotif('⚠️ Falta databaseURL en la configuración','error');return;}
+  inicializarFirebase(config);
+}
+
+function inicializarFirebase(config){
+  try{
+    if(fbApp){try{fbApp.delete();}catch(e){}}
+    fbApp=firebase.initializeApp(config,'jtb-'+(Date.now()));
+    fbDb=firebase.database(fbApp);
+    fbRef=fbDb.ref('jtb_asistencia');
+    localStorage.setItem(FB_CONFIG_KEY,JSON.stringify(config));
+    setSyncStatus('sincronizando');
+    // One-time check connection
+    fbRef.once('value').then(snap=>{
+      const remoto=snap.val();
+      if(remoto&&remoto.ciclos){
+        // Hay datos remotos - preguntar si fusionar
+        const localTieneDatos=DB.ciclos&&DB.ciclos.length>0;
+        if(localTieneDatos&&confirm('¿Cargar los datos guardados en la nube? (Reemplazará los datos locales)')){
+          DB=remoto;
+          localStorage.setItem(DB_KEY,JSON.stringify(DB));
+          actualizarTodasLasVistas();
+        }else if(!localTieneDatos){
+          DB=remoto;
+          localStorage.setItem(DB_KEY,JSON.stringify(DB));
+          actualizarTodasLasVistas();
+        }else{
+          // Subir datos locales a la nube
+          fbRef.set(DB);
+        }
+      }else{
+        // No hay datos remotos, subir locales
+        fbRef.set(DB);
+      }
+      // Activar escucha en tiempo real
+      activarEscuchaFirebase();
+      setSyncStatus('conectado');
+      closeModal('modal-firebase');
+      showNotif('✅ Firebase conectado correctamente','success');
+      actualizarBarraEstadoFirebase();
+    }).catch(e=>{
+      setSyncStatus('desconectado');
+      showNotif('❌ Error de conexión: '+e.message,'error');
+      console.error(e);
+    });
+  }catch(e){
+    setSyncStatus('desconectado');
+    showNotif('❌ Error al inicializar Firebase: '+e.message,'error');
+    console.error(e);
+  }
+}
+
+function activarEscuchaFirebase(){
+  if(fbEscuchando||!fbRef)return;
+  fbEscuchando=true;
+  fbRef.on('value',(snap)=>{
+    const remoto=snap.val();
+    if(remoto){
+      DB=remoto;
+      localStorage.setItem(DB_KEY,JSON.stringify(DB));
+      setSyncStatus('conectado');
+      actualizarTodasLasVistas();
+    }
+  },(e)=>{
+    setSyncStatus('desconectado');
+    console.error('Firebase listener error:',e);
+  });
+}
+
+function desconectarFirebase(){
+  if(fbRef&&fbEscuchando){fbRef.off();fbEscuchando=false;}
+  if(fbApp){try{fbApp.delete();}catch(e){}}
+  fbApp=null;fbDb=null;fbRef=null;
+  localStorage.removeItem(FB_CONFIG_KEY);
+  setSyncStatus('desconectado');
+  closeModal('modal-firebase');
+  showNotif('🔌 Firebase desconectado');
+  actualizarBarraEstadoFirebase();
+}
+
+function actualizarBarraEstadoFirebase(){
+  const bar=document.getElementById('firebase-estado-bar');
+  if(!bar)return;
+  const cfg=getFBConfig();
+  if(cfg&&fbRef){
+    bar.innerHTML=`<div style="background:#d4f5e2;border-radius:8px;padding:10px 14px;font-size:.78rem;display:flex;align-items:center;gap:8px;"><span>✅</span><span><strong>Conectado</strong> · ${cfg.projectId||'proyecto'}</span></div>`;
+  }else if(cfg){
+    bar.innerHTML=`<div style="background:#fff3cd;border-radius:8px;padding:10px 14px;font-size:.78rem;display:flex;align-items:center;gap:8px;"><span>⏳</span><span>Configuración guardada pero no conectado</span><button class="btn btn-xs btn-primary" onclick="inicializarFirebase(getFBConfig())">Reconectar</button></div>`;
+  }else{
+    bar.innerHTML=`<div style="background:#fde8e8;border-radius:8px;padding:10px 14px;font-size:.78rem;display:flex;align-items:center;gap:8px;"><span>❌</span><span>Sin configuración. Pega tu firebaseConfig abajo.</span></div>`;
+  }
+}
+
+function actualizarTodasLasVistas(){
+  updateHeader();
+  fillCicloSelects();
+  const s=currentSection||'dashboard';
+  if(s==='dashboard')renderDashboard();
+  else if(s==='ciclos')renderCiclos();
+  else if(s==='alumnos')renderAlumnos();
+  else if(s==='asistencia'){renderAsistenciaLista();renderResumenDia();}
+  else if(s==='calendario'){renderCalendario();renderListaDiasEspeciales();}
+  else if(s==='reportes'){renderStatsReportes();renderReporteTab(currentReportTab);}
+  else if(s==='nfc')renderQRGrid();
+}
 let DB=loadDB();
 
 // ==================== UTILS ====================
@@ -953,7 +1166,7 @@ function fmtFecha(d){if(!d)return '';const p=d.split('-');if(p.length<3)return d
 function fmtFechaCorta(d){if(!d)return '';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
 function fechaHoy(){const h=new Date();return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');}
 function showNotif(msg,tipo=''){const n=document.getElementById('notif');n.textContent=msg;n.className='notif show '+(tipo||'');setTimeout(()=>{n.className='notif';},2800);}
-function openModal(id){document.getElementById(id).classList.add('open');}
+function openModal(id){document.getElementById(id).classList.add('open');if(id==='modal-firebase')actualizarBarraEstadoFirebase();}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function $(id){return document.getElementById(id);}
 
@@ -2243,8 +2456,14 @@ function init(){
   fillCicloSelects();
   renderDashboard();
   checkNFCParam();
-  // Update header time
   setInterval(updateHeader,60000);
+  // Auto-connect Firebase if config saved
+  const savedCfg=getFBConfig();
+  if(savedCfg){
+    document.getElementById('fb-config-input').value=JSON.stringify(savedCfg,null,2);
+    inicializarFirebase(savedCfg);
+  }
+  actualizarBarraEstadoFirebase();
 }
 
 // Close modals on overlay click
