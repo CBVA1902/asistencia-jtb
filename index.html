@@ -1,0 +1,2261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistencia JTB - Jaime Torres Bodet</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&family=Fredoka+One&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --azul:#1a3a8c;--azul2:#1e4fc2;--rojo:#c0181e;--rojo2:#e02027;
+  --blanco:#ffffff;--gris:#f0f4fc;--gris2:#e8edf8;--gris3:#c5cfe8;
+  --texto:#1a2340;--texto2:#4a5580;
+  --verde:#1d8a3c;--amarillo:#f0a500;--naranja:#e06820;--morado:#6b2fa0;
+  --shadow:0 4px 20px rgba(26,58,140,0.13);
+  --radius:16px;--radius-sm:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito',sans-serif;background:var(--gris);color:var(--texto);min-height:100vh;}
+
+/* HEADER */
+.app-header{
+  background:linear-gradient(135deg,var(--azul) 0%,var(--azul2) 60%,#1040d0 100%);
+  color:white;padding:0;position:sticky;top:0;z-index:100;
+  box-shadow:0 4px 20px rgba(26,58,140,0.4);
+}
+.header-inner{display:flex;align-items:center;gap:16px;padding:10px 20px;}
+.logo-circle{
+  width:60px;height:60px;border-radius:50%;border:3px solid rgba(255,255,255,0.5);
+  flex-shrink:0;background:white;overflow:hidden;
+}
+.logo-circle img{width:100%;height:100%;object-fit:cover;}
+.header-info h1{font-family:'Fredoka One',sans-serif;font-size:1.25rem;letter-spacing:.5px;margin-bottom:1px;}
+.header-info p{font-size:.72rem;opacity:.85;font-weight:600;}
+.header-info .clave{font-size:.65rem;opacity:.7;font-weight:400;}
+.header-right{margin-left:auto;text-align:right;}
+.header-right .fecha-hoy{font-size:.7rem;opacity:.8;font-weight:600;}
+.header-right .ciclo-badge{
+  background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);
+  border-radius:20px;padding:3px 10px;font-size:.68rem;font-weight:700;
+  margin-top:3px;display:inline-block;
+}
+
+/* NAV */
+.app-nav{
+  background:var(--azul);border-bottom:3px solid var(--rojo);
+  display:flex;overflow-x:auto;padding:0 12px;gap:2px;
+}
+.app-nav::-webkit-scrollbar{height:3px;}
+.app-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.3);}
+.nav-btn{
+  color:rgba(255,255,255,0.75);background:none;border:none;
+  padding:11px 14px;font-family:'Nunito',sans-serif;font-size:.78rem;
+  font-weight:700;cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;
+  transition:all .2s;display:flex;align-items:center;gap:5px;margin-bottom:-3px;
+}
+.nav-btn:hover{color:white;background:rgba(255,255,255,0.08);}
+.nav-btn.active{color:white;border-bottom-color:var(--rojo2);background:rgba(255,255,255,0.12);}
+.nav-btn .nav-icon{font-size:1.1rem;}
+
+/* MAIN */
+.main{padding:20px;max-width:1200px;margin:0 auto;}
+.section{display:none;animation:fadeIn .3s ease;}
+.section.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* CARDS */
+.card{background:white;border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:18px;}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--gris2);}
+.card-title{font-family:'Fredoka One',sans-serif;font-size:1.1rem;color:var(--azul);}
+.card-icon{font-size:1.4rem;}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+@media(max-width:768px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr 1fr;}}
+@media(max-width:480px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}}
+
+/* STAT CARDS */
+.stat-card{
+  background:white;border-radius:var(--radius-sm);padding:16px;
+  text-align:center;box-shadow:var(--shadow);border-top:4px solid var(--azul);
+  transition:transform .2s;
+}
+.stat-card:hover{transform:translateY(-3px);}
+.stat-card.verde{border-top-color:var(--verde);}
+.stat-card.rojo{border-top-color:var(--rojo);}
+.stat-card.amarillo{border-top-color:var(--amarillo);}
+.stat-card.naranja{border-top-color:var(--naranja);}
+.stat-card.morado{border-top-color:var(--morado);}
+.stat-num{font-family:'Fredoka One',sans-serif;font-size:2rem;color:var(--azul);}
+.stat-card.verde .stat-num{color:var(--verde);}
+.stat-card.rojo .stat-num{color:var(--rojo);}
+.stat-card.amarillo .stat-num{color:var(--amarillo);}
+.stat-card.naranja .stat-num{color:var(--naranja);}
+.stat-card.morado .stat-num{color:var(--morado);}
+.stat-label{font-size:.72rem;font-weight:700;color:var(--texto2);margin-top:4px;text-transform:uppercase;letter-spacing:.5px;}
+.stat-sub{font-size:.65rem;color:var(--texto2);margin-top:2px;}
+
+/* BUTTONS */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;padding:9px 18px;
+  border-radius:var(--radius-sm);border:none;cursor:pointer;
+  font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;
+  transition:all .2s;text-decoration:none;white-space:nowrap;
+}
+.btn-primary{background:var(--azul2);color:white;}
+.btn-primary:hover{background:var(--azul);transform:translateY(-1px);}
+.btn-danger{background:var(--rojo2);color:white;}
+.btn-danger:hover{background:var(--rojo);}
+.btn-success{background:var(--verde);color:white;}
+.btn-success:hover{background:#166a2e;}
+.btn-warning{background:var(--amarillo);color:white;}
+.btn-warning:hover{background:#d09000;}
+.btn-outline{background:transparent;color:var(--azul2);border:2px solid var(--azul2);}
+.btn-outline:hover{background:var(--azul2);color:white;}
+.btn-sm{padding:6px 12px;font-size:.75rem;}
+.btn-xs{padding:4px 8px;font-size:.68rem;border-radius:6px;}
+.btn-full{width:100%;justify-content:center;}
+.btn-morado{background:var(--morado);color:white;}
+.btn-naranja{background:var(--naranja);color:white;}
+
+/* FORMS */
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:.78rem;font-weight:700;color:var(--texto2);margin-bottom:5px;}
+.form-control{
+  width:100%;padding:9px 13px;border:2px solid var(--gris3);
+  border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;
+  font-size:.85rem;color:var(--texto);background:white;
+  transition:border-color .2s;
+}
+.form-control:focus{outline:none;border-color:var(--azul2);}
+select.form-control{cursor:pointer;}
+
+/* TABLES */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:.8rem;}
+thead th{background:var(--azul);color:white;padding:10px 12px;font-weight:700;text-align:left;font-size:.75rem;}
+tbody tr{border-bottom:1px solid var(--gris2);}
+tbody tr:hover{background:var(--gris);}
+tbody td{padding:9px 12px;vertical-align:middle;}
+.badge{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:3px 9px;border-radius:20px;font-size:.68rem;font-weight:700;
+}
+.badge-verde{background:#d4f5e2;color:var(--verde);}
+.badge-rojo{background:#fde8e8;color:var(--rojo);}
+.badge-amarillo{background:#fff3cd;color:#8a6100;}
+.badge-azul{background:#dde8ff;color:var(--azul2);}
+.badge-naranja{background:#ffe5d4;color:var(--naranja);}
+.badge-morado{background:#f0e4ff;color:var(--morado);}
+.badge-gris{background:#e8edf8;color:var(--texto2);}
+
+/* MODAL */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(10,20,60,0.6);
+  z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:white;border-radius:var(--radius);padding:24px;
+  width:90%;max-width:560px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(10,20,60,0.3);
+  animation:modalIn .25s ease;
+}
+@keyframes modalIn{from{transform:scale(0.92);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.modal-title{font-family:'Fredoka One',sans-serif;font-size:1.15rem;color:var(--azul);}
+.modal-close{background:var(--gris2);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{background:var(--gris3);}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--gris2);}
+
+/* CALENDARIO DE ASISTENCIA */
+.cal-nav{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.cal-nav h3{font-family:'Fredoka One',sans-serif;font-size:1.1rem;color:var(--azul);flex:1;text-align:center;text-transform:capitalize;}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-day-header{
+  text-align:center;font-size:.65rem;font-weight:800;color:var(--texto2);
+  padding:6px 2px;text-transform:uppercase;letter-spacing:.5px;
+}
+.cal-day{
+  aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;cursor:pointer;
+  font-size:.75rem;font-weight:700;transition:all .15s;position:relative;
+  border:1.5px solid transparent;min-height:36px;
+}
+.cal-day.empty{cursor:default;}
+.cal-day.hoy{border-color:var(--azul2)!important;font-weight:900;}
+.cal-day.fuera-ciclo{opacity:.3;cursor:default;}
+.cal-day:hover:not(.empty):not(.fuera-ciclo):not(.no-escolar){transform:scale(1.08);z-index:2;}
+
+/* TIPOS DE DÍA */
+.cal-day.asistencia{background:#d4f5e2;color:var(--verde);}
+.cal-day.retardo{background:#fff3cd;color:#8a6100;}
+.cal-day.inasistencia{background:#fde8e8;color:var(--rojo);}
+.cal-day.inasistencia_justificada{background:#ffe5d4;color:var(--naranja);}
+.cal-day.no-escolar{background:var(--gris2);color:var(--texto2);cursor:default;opacity:.7;}
+.cal-day.CTE{background:#dde8ff;color:var(--azul2);}
+.cal-day.SUSPENSION{background:#f0e4ff;color:var(--morado);}
+.cal-day.EVALUACION{background:#fff3cd;color:#8a6100;}
+.cal-day.VACACIONES{background:#e8edf8;color:var(--texto2);}
+.cal-day.FESTIVO{background:#fde8e8;color:var(--rojo);}
+.cal-day.DOCENTE{background:#ffe5d4;color:var(--naranja);}
+.cal-day.finde{opacity:.55;cursor:default;}
+.cal-day .dia-num{font-size:.82rem;font-weight:800;line-height:1;}
+.cal-day .dia-dot{width:5px;height:5px;border-radius:50%;background:currentColor;margin-top:2px;}
+
+.leyenda{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.leyenda-item{display:flex;align-items:center;gap:5px;font-size:.68rem;font-weight:700;}
+.leyenda-dot{width:12px;height:12px;border-radius:3px;}
+
+/* ALUMNO CARD */
+.alumno-card{
+  background:white;border-radius:var(--radius-sm);padding:14px;
+  box-shadow:var(--shadow);border-left:5px solid var(--azul2);
+  display:flex;align-items:center;gap:12px;
+  transition:transform .2s;
+}
+.alumno-card:hover{transform:translateX(3px);}
+.alumno-card.grado-1{border-left-color:var(--verde);}
+.alumno-card.grado-2{border-left-color:var(--azul2);}
+.alumno-card.grado-3{border-left-color:var(--rojo2);}
+.alumno-avatar{
+  width:42px;height:42px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Fredoka One',sans-serif;font-size:1.1rem;color:white;flex-shrink:0;
+}
+.g1 .alumno-avatar{background:var(--verde);}
+.g2 .alumno-avatar{background:var(--azul2);}
+.g3 .alumno-avatar{background:var(--rojo2);}
+.alumno-info{flex:1;}
+.alumno-nombre{font-weight:800;font-size:.88rem;color:var(--texto);}
+.alumno-meta{font-size:.7rem;color:var(--texto2);font-weight:600;}
+.alumno-actions{display:flex;gap:6px;flex-shrink:0;}
+
+/* GRADO TABS */
+.grado-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+.grado-tab{
+  padding:8px 18px;border-radius:20px;border:2px solid var(--gris3);
+  font-weight:700;font-size:.78rem;cursor:pointer;transition:all .2s;
+  background:white;color:var(--texto2);
+}
+.grado-tab.active-1{background:var(--verde);border-color:var(--verde);color:white;}
+.grado-tab.active-2{background:var(--azul2);border-color:var(--azul2);color:white;}
+.grado-tab.active-3{background:var(--rojo2);border-color:var(--rojo2);color:white;}
+.grado-tab.active-all{background:var(--azul);border-color:var(--azul);color:white;}
+
+/* NFC/QR */
+.qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;}
+.qr-card{
+  background:white;border-radius:var(--radius-sm);padding:14px;text-align:center;
+  box-shadow:var(--shadow);border-top:4px solid var(--azul2);
+}
+.qr-card.g1{border-top-color:var(--verde);}
+.qr-card.g2{border-top-color:var(--azul2);}
+.qr-card.g3{border-top-color:var(--rojo2);}
+.qr-nombre{font-size:.78rem;font-weight:800;margin-top:8px;color:var(--texto);}
+.qr-grado{font-size:.65rem;color:var(--texto2);font-weight:600;margin-bottom:6px;}
+.qr-container{width:120px;height:120px;margin:0 auto;}
+
+/* ASISTENCIA RÁPIDA */
+.asist-opciones{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.asist-btn{
+  padding:12px 8px;border-radius:var(--radius-sm);border:2px solid transparent;
+  cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;font-size:.78rem;
+  transition:all .2s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.asist-btn .asist-icon{font-size:1.5rem;}
+.asist-btn.tipo-asistencia{background:#d4f5e2;border-color:#86d9aa;color:var(--verde);}
+.asist-btn.tipo-retardo{background:#fff3cd;border-color:#f0c04a;color:#8a6100;}
+.asist-btn.tipo-inasistencia{background:#fde8e8;border-color:#f0a0a0;color:var(--rojo);}
+.asist-btn.tipo-inasistencia_justificada{background:#ffe5d4;border-color:#f0b090;color:var(--naranja);}
+.asist-btn:hover,.asist-btn.selected{transform:scale(1.04);box-shadow:0 4px 12px rgba(0,0,0,.15);}
+
+/* NOTIF */
+.notif{
+  position:fixed;bottom:24px;right:24px;z-index:999;
+  background:var(--azul);color:white;border-radius:var(--radius-sm);
+  padding:12px 20px;font-weight:700;font-size:.82rem;
+  box-shadow:0 8px 24px rgba(26,58,140,0.4);
+  transform:translateY(100px);opacity:0;transition:all .3s;pointer-events:none;
+}
+.notif.show{transform:translateY(0);opacity:1;}
+.notif.success{background:var(--verde);}
+.notif.error{background:var(--rojo);}
+
+/* SCANNER */
+.scanner-area{
+  background:#000;border-radius:var(--radius);overflow:hidden;
+  position:relative;max-width:360px;margin:0 auto;
+}
+#scanner-video{width:100%;display:block;}
+.scanner-overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+}
+.scanner-frame{
+  width:200px;height:200px;border:3px solid var(--rojo2);border-radius:8px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,0.5);
+}
+
+/* REPORTES */
+.chart-container{position:relative;height:280px;margin-bottom:10px;}
+.report-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+.report-tab{
+  padding:7px 16px;border-radius:20px;border:2px solid var(--gris3);
+  font-weight:700;font-size:.75rem;cursor:pointer;transition:all .2s;
+  background:white;color:var(--texto2);
+}
+.report-tab.active{background:var(--azul2);border-color:var(--azul2);color:white;}
+
+/* DÍAS ESPECIALES LISTA */
+.dia-especial-item{
+  display:flex;align-items:center;gap:10px;padding:8px 12px;
+  border-radius:8px;background:var(--gris);margin-bottom:6px;
+}
+.dia-especial-tipo{
+  width:80px;text-align:center;padding:3px 8px;border-radius:12px;
+  font-size:.65rem;font-weight:700;flex-shrink:0;
+}
+.tipo-CTE{background:#dde8ff;color:var(--azul2);}
+.tipo-SUSPENSION{background:#f0e4ff;color:var(--morado);}
+.tipo-EVALUACION{background:#fff3cd;color:#8a6100;}
+.tipo-VACACIONES{background:#e8edf8;color:var(--texto2);}
+.tipo-FESTIVO{background:#fde8e8;color:var(--rojo);}
+.tipo-DOCENTE{background:#ffe5d4;color:var(--naranja);}
+.tipo-OTRO{background:#d4f5e2;color:var(--verde);}
+
+/* SCROLL TOP */
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:var(--gris);}
+::-webkit-scrollbar-thumb{background:var(--gris3);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--azul2);}
+
+/* PRINT */
+@media print{
+  .app-header,.app-nav,.btn,.modal-overlay{display:none!important;}
+  .main{padding:0;}
+  .card{box-shadow:none;break-inside:avoid;}
+}
+
+/* TABS ASISTENCIA ALUMNO */
+.asist-list{display:flex;flex-direction:column;gap:6px;}
+.asist-row{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border-radius:var(--radius-sm);background:white;box-shadow:0 2px 8px rgba(26,58,140,.07);
+  border-left:4px solid var(--gris3);
+}
+.asist-row.asistencia{border-left-color:var(--verde);}
+.asist-row.retardo{border-left-color:var(--amarillo);}
+.asist-row.inasistencia{border-left-color:var(--rojo);}
+.asist-row.inasistencia_justificada{border-left-color:var(--naranja);}
+.asist-row.no-escolar{border-left-color:var(--gris3);opacity:.6;}
+.asist-nombre{font-weight:800;font-size:.85rem;flex:1;}
+.asist-estado{font-size:.7rem;font-weight:700;}
+
+/* SELECCIÓN CICLO */
+.ciclo-selector{
+  background:white;border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:14px 20px;margin-bottom:18px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.ciclo-selector label{font-weight:800;font-size:.8rem;color:var(--azul);white-space:nowrap;}
+.ciclo-selector select{min-width:180px;}
+.ciclo-info{font-size:.72rem;color:var(--texto2);font-weight:600;}
+
+/* WELCOME */
+.welcome-banner{
+  background:linear-gradient(135deg,var(--azul) 0%,var(--azul2) 100%);
+  border-radius:var(--radius);padding:22px 24px;color:white;margin-bottom:18px;
+  display:flex;align-items:center;gap:18px;
+}
+.welcome-text h2{font-family:'Fredoka One',sans-serif;font-size:1.3rem;margin-bottom:4px;}
+.welcome-text p{font-size:.8rem;opacity:.85;font-weight:600;}
+.welcome-logo{width:70px;height:70px;border-radius:50%;border:3px solid rgba(255,255,255,.4);background:white;overflow:hidden;flex-shrink:0;}
+.welcome-logo img{width:100%;height:100%;object-fit:cover;}
+
+/* NFC info */
+.nfc-info{background:linear-gradient(135deg,#1a3a8c,#1e4fc2);color:white;border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;}
+.nfc-info h4{font-family:'Fredoka One',sans-serif;margin-bottom:6px;}
+.nfc-info p{font-size:.75rem;opacity:.88;line-height:1.5;}
+
+/* Selector dia asistencia */
+.date-selector-bar{
+  background:white;border-radius:var(--radius-sm);padding:12px 16px;
+  margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  box-shadow:var(--shadow);
+}
+.date-selector-bar label{font-weight:800;font-size:.78rem;color:var(--azul);}
+
+/* RESUMEN DÍA */
+.resumen-dia{
+  display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;
+  padding:12px;background:var(--gris);border-radius:var(--radius-sm);
+}
+.resumen-dia-item{
+  flex:1;min-width:80px;text-align:center;
+  background:white;border-radius:8px;padding:8px 6px;
+  box-shadow:0 2px 6px rgba(26,58,140,.08);
+}
+.resumen-dia-num{font-family:'Fredoka One',sans-serif;font-size:1.5rem;}
+.resumen-dia-label{font-size:.62rem;font-weight:700;color:var(--texto2);text-transform:uppercase;}
+
+
+
+.logo-circle, .welcome-logo {
+  background-image: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCABQAFADASIAAhEBAxEB/8QAHAAAAgIDAQEAAAAAAAAAAAAABgcEBQABAwgC/8QANxAAAgEDAwIEBQIEBQUAAAAAAQIDBAURAAYhEhMHMUFRImFxgZEUMiNCUrEVgpKhwSRicqLw/8QAGAEBAAMBAAAAAAAAAAAAAAAABAMFBgL/xAA0EQABAwICCAQEBwEBAAAAAAABAgMRAAQhMQUSE0FRYYGRFDJxoQYiM7EjUnLB0eHwJUL/2gAMAwEAAhEDEQA/AH/rNZqj3Ruih2tbDVVZ65XysMCn4pW9h7D3PprtttTighAkmuVKCRrKyq2qqqnoqd6iqnjhhQZaSRgqj7nQFd/F6y0TNHb4Jq9xx1j+HH+TyfxpY36/XXclXT1t5eeO3yyERLEn8NFBw3QCQGIz5k/fV9S1G1dv1yvGDLT1NNBLFPLCtU4wx7qMhwEZvL1wB89LPhLdeyXLjn5U5DlOZ6UlrR14+1tyNm2clHf0/ndlNTZPFzcM7D9JZ6ZVZulcpJJk+wIxk6weLO5aWQrWWam+HBZTFLGQD9ScahnxJjhgp6aktTRwU8iMi9/+VJGZV8jxggcYOR5kca3B4mHtVYmoHSSeBIlaGQdKdPUeBgHBLE+ekw/E+Ew6z959qiNvaAkeJx/UmM/SPeiq0+MNpqnWO5Uk9Cx47inuoPrjkfjR/RV9JcqVKmiqYqiB/J42DDSEvElt3NW2W22GGNJ2UQyMaZYB1cAHIJJ4BJyT8vPUmsoL14eXdKm0VzVFPIhkJCHDIDj+IgyAD6Nn8EHRk+FuFFsAtLG5WU8JzHWpbiwuLdCXUqDqVAnDzQN8Zdj9qfWs0N7Q3hRbrt5eMCGsiA79OTkr8x7qffRJorrS2llCxBFGQtK06yThUeurILdQz1lS4SCBDI7H0AGdIumaXxE3o1RcZ1hpFBZYncr/AAl5MaHB+LB6j9/sZ+MN4alstJao2w1ZIXkwf5EwcfdiPxofhq6ba2we9SVFW1bOwjkppwqinqCpzIEI6lwBwwPPHtpiVKt7cFv6jpgchkY5k4VLasJfdUtzyNiTwk5TyAE9hvqFvTcVJ+hTbVDGlUlKRH+rcKSQv7AvRwTg46sZ5Ixkk6HYbA0UcstwkaExAM9PGuZACQMsTwuOpc5yfiHGolnrYqGu65QQjIY+6oy8RP8AOvuR6+4JHBOdMGK97fs9tiroGgqqt4lRCinuHpGDnqyVGSeTg4wPQaU+09oxsIt0gEjFZx6D05/euE3rF8v8fWWNaENJ3niTzxmMvSqiDbtJHDJUG0M1PFUKokqZWUSxHPIYkKD5c/PUhtsUdXb1morWJ5DNIv8A0zF1xgdCgq5Jz/W2On1XV/Y9o3Dd80N63NIyURw9PRIxHUp8iT6Aj7n5DjXW/bGrLBUPeNqMQgHVPQMcqwH9OfP6efsfTVV4q6mS8rv+1WxbswjZ7FsOcM0/pK+POInCYxpc1u317sb26Vuy5ZVNS6qesOVVcjHxHGcYGMjJ5Gr7au6aqluC2q7tP3pKhcTVVQ6dJ6ekJKCD1x+WAccnz5zq0TcVivlvNXXFaWspwJev4e8hUggoxHxjIHB+40DX2tpajsQ08z1ZjyzVMgILBsHo55ODkkn1Jxx52jIe0kNk+iQBgsZg8+M8B/YqPEMWOupGs2sKhTSuB/KeQ37/AEMG7uVJPsO/UFytT1ABTLRVKhHGGKlXA4CvjK/L5jTytF0p71aaa40rZhnQMM+YPqD8wcj7aUNkr5Ny7VjsMi0VLAo7MtVNKil5OTGVXILOT0DPpg+ecatfBy7SdNwskxwYj3419uelx+cfk6N8zzCkOfUaw9Rl1g7+FTXrSWnUvN+R3HrmDykbsxFUPi9UtLvCKLPENIgH1LMT/wAaF7ruO4Xqgo6Wvk75pC5WdyWkbqxwWPoMaJvF2Bot5rIRxLSRsD9Cw0Ba7Sf+laJPl1Pf5v3in2zaT8PXjgHzhfUD5AfYms1HNxgiY4LMRkfCNares0/QgyXYJ+dMuz+Glmo6VP8AEYzW1RHxlnKoD7KARx8zpnxHpZFqnw6h5h/oqh+H7dxLou2zik4dv7rhT72qqm1x0lPf6eKjjjESRkuJVUYChgq5/aOcH76qbj4hyUEYpFvLTqPhaGOOYhF9viYA/wD3lrhuvaQsNzhr7e6x0FQ3a7IyTG3QT6nkHpz58aELdsrcF2o0roqQCCUdYkmlVOoH155x89YiG1JC9qqDxNadLbJR5fxJxwwjd3qW11oKypc07dpCzdEcnBUE8D8a7a3cvDm50Vmjq4ClZUqzGohgOehcDHT/AFHzz9RjUO2SNLb4mc5PIz7gHW4+HNJJeR4Uf+Rn1396zfxFbrLvi1nFUA9BA+2NS9GXhdUNDvyjQHAmjljP+nq/uo0G+mjDwwhMu/qAgcRJK5/0Ef3I0N2Bpe5CctmZ7Jq9ck/C9qV5hzDuv+6MvGS0tLQUF2jXPYcwyn/tblT+Rj76TuvU92tlPebVU26qXMNRGUbHmPYj5g4P215nvVoqrFdqi3Vi4lhbGccOvow+RGhvBbluh5n6jJn1Tn7H2NdaAuWUPuWNz9N8R6Ky9x7gVFppI4aqKWaBZ0jcP22OAxHI/wB8aY1uvVLfa4TiaRUCFZqSSFmwxwAVZePMkfPOlsFZlYhSQoyTjy+uvlK++0EvVZrk1CGHxlJWRmOc84HkNWV62xpm3RcMzrZGMSBiSIx374qsbYe0Hcu2t0YTEpO5Rkb/AEmRuprXSzRXnZFdUGrzT9qSohmkTJVlBwQPQcEffUGzwVm4dkW64qf0zhcERJ1BelsdJQnkEDHHvrW3N9Wij2lS2q8wSzTLE0dQqRCSOQEnPnjOQeRjUHe286K77TNksNO0KylUcSr2VSIc4Xpz54Ax7awyLDTBuNQsqA1/Nq4BOR3bxjS1aZbCipKx3H+mpN5vlHZpe9HFM9SqZSIJ0I2fIk+300tqSVp4TM0SQmR2YRRjCpk/tGuNspaijieGXt9okFQkhYg/catKe21L0clRT0cjU8bhXkjjPSrMeASPUn++tro+2a0UhV0/OEgTmciIHf8Amo7xS9MKatLQzIGsZwTiQZw9CMeWdcNNXwatLNU3C7uvwKopoyR5k4Zv7L+dLS32+pudxgoaSIyVEz9CL8/n7AeZ+mvSu3bJBt6xUttg5ES/G+P3ueWb7nQmStLLl0953jgOCZnscAOQp2nnmQtnRtsZQwMTxVEdxiTzNWmhfeezKXdlAPiWGvhB7E+P/VvdT/t5/Uo1momnVtLC0GCKo1oSsaqsq892+aTZ9fVWm92tYzUlI5ZynWwi61LdIOVZcKcEDIOPbGpU+0rZeQtRYq1AHdKftRJJLEJifV2wyoQV5IPPV7add2stuvlIaW5UkdRF5gMOVPuD5g/TS6uPhDJBOaiwXiSnb0jnJ4/zrz+RpKQype0ZVsl9dU9sR6QRTE6Rd1NldJ2qeJgnqDgcMAQQaA5tibhh6S1CCGUuMTIDgAE8Eg8Ag/fUSDa95qK+qoY6FzVUkXdmjLAFVwCPXknIwByc6ManaPiGiiImOqRIZIFImjOEdQrAdQB5CgfLGuybe8SJ52lCwUcrqqPPG8UbsFxjLLknGBpviNJRG3R6yn+P2qEDQ/mLBnh8/H9R3cxjQhte2Wm4VbG6V6U6wgyGGQ9sSqFJ4f0OenjHIzg50Q125pLzDFt/aVukSOZVJj7S9UfkSqn0GcEsccqCOedXVB4Q1NVU/qb/AHfuMxBdacZZv87eX2GmLZdv2vb9N2LbSJAp/cw5d/8AyY8nQobQraXLm2X11ffMcgAKRc34X+HZNbFHSfURv5kk1Q7G2NDtenNTUlZ7pMuJJByIx/Sv/J9dGOs1mjvPLeWVrONBQgIECv/Z");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="header-inner">
+    <div class="logo-circle"></div>
+    <div class="header-info">
+      <h1>🏫 Jaime Torres Bodet</h1>
+      <p>Jardín de Niños · Xochitla, Ver. · Proceso Unitario</p>
+      <div class="clave">Mtra. Carla Berenice Vilis Álvarez · Clave: 30EJN1426K</div>
+    </div>
+    <div class="header-right">
+      <div class="fecha-hoy" id="fecha-hoy"></div>
+      <div class="ciclo-badge" id="ciclo-badge-header">Sin ciclo</div>
+    </div>
+  </div>
+</header>
+
+<!-- NAVEGACIÓN -->
+<nav class="app-nav">
+  <button class="nav-btn active" onclick="showSection('dashboard')" id="nav-dashboard">
+    <span class="nav-icon">🏠</span> Inicio
+  </button>
+  <button class="nav-btn" onclick="showSection('ciclos')" id="nav-ciclos">
+    <span class="nav-icon">📅</span> Ciclos Escolares
+  </button>
+  <button class="nav-btn" onclick="showSection('alumnos')" id="nav-alumnos">
+    <span class="nav-icon">👧</span> Alumnos
+  </button>
+  <button class="nav-btn" onclick="showSection('asistencia')" id="nav-asistencia">
+    <span class="nav-icon">✅</span> Asistencia
+  </button>
+  <button class="nav-btn" onclick="showSection('calendario')" id="nav-calendario">
+    <span class="nav-icon">🗓️</span> Calendario
+  </button>
+  <button class="nav-btn" onclick="showSection('reportes')" id="nav-reportes">
+    <span class="nav-icon">📊</span> Reportes
+  </button>
+  <button class="nav-btn" onclick="showSection('nfc')" id="nav-nfc">
+    <span class="nav-icon">📱</span> NFC/QR
+  </button>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<!-- ===== DASHBOARD ===== -->
+<div id="section-dashboard" class="section active">
+  <div class="welcome-banner">
+    <div class="welcome-logo"></div>
+    <div class="welcome-text">
+      <h2>¡Bienvenida, Mtra. Carla! 👋</h2>
+      <p>Sistema de Asistencia · Jardín de Niños Jaime Torres Bodet · 30EJN1426K</p>
+    </div>
+  </div>
+  <div class="grid-4" id="stats-dashboard">
+    <div class="stat-card azul"><div class="stat-num" id="stat-alumnos">0</div><div class="stat-label">Alumnos</div></div>
+    <div class="stat-card verde"><div class="stat-num" id="stat-hoy-asistencia">0</div><div class="stat-label">Asistencias hoy</div></div>
+    <div class="stat-card rojo"><div class="stat-num" id="stat-hoy-faltas">0</div><div class="stat-label">Faltas hoy</div></div>
+    <div class="stat-card amarillo"><div class="stat-num" id="stat-hoy-retardos">0</div><div class="stat-label">Retardos hoy</div></div>
+  </div>
+  <div class="grid-2" style="margin-top:16px;">
+    <div class="card">
+      <div class="card-header"><span class="card-icon">📅</span><div class="card-title">Ciclo Activo</div></div>
+      <div id="dashboard-ciclo-info"><p style="color:var(--texto2);font-size:.82rem;">No hay ciclo escolar configurado. Ve a <strong>Ciclos Escolares</strong> para crear uno.</p></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-icon">📆</span><div class="card-title">Hoy en el Calendario</div></div>
+      <div id="dashboard-dia-info"><p style="color:var(--texto2);font-size:.82rem;">Selecciona un ciclo escolar para ver el estado del día.</p></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:0;">
+    <div class="card-header"><span class="card-icon">⚡</span><div class="card-title">Acceso Rápido</div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="showSection('asistencia')">✅ Pasar Asistencia Hoy</button>
+      <button class="btn btn-success" onclick="showSection('alumnos')">➕ Agregar Alumno</button>
+      <button class="btn btn-morado" onclick="showSection('reportes')">📊 Ver Reportes</button>
+      <button class="btn btn-naranja" onclick="showSection('nfc')">📱 Imprimir QR/NFC</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CICLOS ESCOLARES ===== -->
+<div id="section-ciclos" class="section">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+    <h2 style="font-family:'Fredoka One',sans-serif;font-size:1.3rem;color:var(--azul);">📅 Ciclos Escolares</h2>
+    <button class="btn btn-primary" onclick="openModal('modal-nuevo-ciclo')">➕ Nuevo Ciclo</button>
+  </div>
+  <div id="lista-ciclos">
+    <p style="color:var(--texto2);font-size:.85rem;padding:20px;text-align:center;">No hay ciclos escolares registrados.</p>
+  </div>
+</div>
+
+<!-- ===== ALUMNOS ===== -->
+<div id="section-alumnos" class="section">
+  <div class="ciclo-selector">
+    <label>📅 Ciclo:</label>
+    <select class="form-control" id="sel-ciclo-alumnos" onchange="loadAlumnosSection()" style="min-width:160px;"></select>
+    <div class="ciclo-info" id="info-ciclo-alumnos"></div>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-sm" onclick="openModalAlumno()">➕ Nuevo Alumno</button>
+      <button class="btn btn-outline btn-sm" onclick="exportarListaAlumnos()">📄 Exportar Lista</button>
+    </div>
+  </div>
+
+  <div class="grado-tabs" id="grado-filter-tabs">
+    <button class="grado-tab active-all" onclick="filtrarGrado('todos')">🎒 Todos</button>
+    <button class="grado-tab" onclick="filtrarGrado('1')">1° Grado</button>
+    <button class="grado-tab" onclick="filtrarGrado('2')">2° Grado</button>
+    <button class="grado-tab" onclick="filtrarGrado('3')">3° Grado</button>
+  </div>
+
+  <div class="grid-3" id="resumen-grados" style="margin-bottom:16px;">
+    <div class="stat-card verde"><div class="stat-num" id="cnt-g1">0</div><div class="stat-label">Primero</div></div>
+    <div class="stat-card azul"><div class="stat-num" id="cnt-g2">0</div><div class="stat-label">Segundo</div></div>
+    <div class="stat-card rojo"><div class="stat-num" id="cnt-g3">0</div><div class="stat-label">Tercero</div></div>
+  </div>
+
+  <div id="lista-alumnos" style="display:flex;flex-direction:column;gap:8px;"></div>
+</div>
+
+<!-- ===== ASISTENCIA ===== -->
+<div id="section-asistencia" class="section">
+  <div class="ciclo-selector">
+    <label>📅 Ciclo:</label>
+    <select class="form-control" id="sel-ciclo-asist" onchange="loadAsistenciaSection()" style="min-width:160px;"></select>
+    <label>📆 Fecha:</label>
+    <input type="date" class="form-control" id="fecha-asist" onchange="loadAsistenciaFecha()" style="min-width:160px;">
+    <button class="btn btn-outline btn-sm" onclick="marcarHoy()">Hoy</button>
+  </div>
+
+  <div id="dia-especial-aviso" style="display:none;margin-bottom:12px;"></div>
+
+  <div id="ausencia-docente-bar" style="margin-bottom:12px;"></div>
+
+  <div class="resumen-dia" id="resumen-dia-asistencia">
+    <div class="resumen-dia-item"><div class="resumen-dia-num" id="rd-asistencia" style="color:var(--verde)">-</div><div class="resumen-dia-label">✅ Presentes</div></div>
+    <div class="resumen-dia-item"><div class="resumen-dia-num" id="rd-retardo" style="color:var(--amarillo)">-</div><div class="resumen-dia-label">⏰ Retardos</div></div>
+    <div class="resumen-dia-item"><div class="resumen-dia-num" id="rd-falta" style="color:var(--rojo)">-</div><div class="resumen-dia-label">❌ Faltas</div></div>
+    <div class="resumen-dia-item"><div class="resumen-dia-num" id="rd-justif" style="color:var(--naranja)">-</div><div class="resumen-dia-label">📋 Justif.</div></div>
+    <div class="resumen-dia-item"><div class="resumen-dia-num" id="rd-total" style="color:var(--azul)">-</div><div class="resumen-dia-label">Total</div></div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+    <div class="grado-tabs" style="margin:0;" id="asist-grado-tabs">
+      <button class="grado-tab active-all" onclick="filtrarGradoAsist('todos')">Todos</button>
+      <button class="grado-tab" onclick="filtrarGradoAsist('1')">1°</button>
+      <button class="grado-tab" onclick="filtrarGradoAsist('2')">2°</button>
+      <button class="grado-tab" onclick="filtrarGradoAsist('3')">3°</button>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-success btn-sm" onclick="marcarTodosPresentes()">✅ Marcar Todos Presentes</button>
+      <button class="btn btn-warning btn-sm" onclick="openModalAusenciaDocente()">👩‍🏫 Ausencia Docente</button>
+      <button class="btn btn-outline btn-sm" onclick="exportarAsistenciaDia()">📄 Exportar Día</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="lista-asistencia-dia" class="asist-list">
+      <p style="text-align:center;color:var(--texto2);padding:20px;font-size:.85rem;">Selecciona un ciclo y una fecha para pasar asistencia.</p>
+    </div>
+  </div>
+
+  <div style="margin-top:14px;font-size:.72rem;color:var(--texto2);">
+    ⏰ Hora de retardo configurada: <strong id="hora-retardo-display">08:30</strong> 
+    <button class="btn btn-xs btn-outline" onclick="openModalConfigHora()" style="margin-left:8px;">Cambiar</button>
+  </div>
+</div>
+
+<!-- ===== CALENDARIO ESCOLAR ===== -->
+<div id="section-calendario" class="section">
+  <div class="ciclo-selector">
+    <label>📅 Ciclo:</label>
+    <select class="form-control" id="sel-ciclo-cal" onchange="loadCalendarioSection()" style="min-width:160px;"></select>
+    <button class="btn btn-primary btn-sm" onclick="openModalDiaEspecial()">➕ Agregar Día Especial</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-icon">📆</span>
+      <div class="card-title">Calendario Escolar SEP</div>
+    </div>
+    <div class="leyenda">
+      <div class="leyenda-item"><div class="leyenda-dot" style="background:#dde8ff;border:1px solid #aac0f0;"></div> CTE</div>
+      <div class="leyenda-item"><div class="leyenda-dot" style="background:#f0e4ff;border:1px solid #c0a0e8;"></div> Suspensión</div>
+      <div class="leyenda-item"><div class="leyenda-dot" style="background:#fff3cd;border:1px solid #f0c04a;"></div> Evaluación</div>
+      <div class="leyenda-item"><div class="leyenda-dot" style="background:#e8edf8;border:1px solid #c5cfe8;"></div> Vacaciones</div>
+      <div class="leyenda-item"><div class="leyenda-dot" style="background:#fde8e8;border:1px solid #f0a0a0;"></div> Festivo/Suspensión</div>
+      <div class="leyenda-item"><div class="leyenda-dot" style="background:#d4f5e2;border:1px solid #86d9aa;"></div> Día Normal</div>
+    </div>
+    <div class="cal-nav" id="cal-nav">
+      <button class="btn btn-sm btn-outline" onclick="calPrev()">◀</button>
+      <h3 id="cal-titulo">—</h3>
+      <button class="btn btn-sm btn-outline" onclick="calNext()">▶</button>
+    </div>
+    <div class="calendar-grid" id="calendario-grid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-icon">📋</span><div class="card-title">Días Especiales del Ciclo</div></div>
+    <div id="lista-dias-especiales"></div>
+  </div>
+</div>
+
+<!-- ===== REPORTES ===== -->
+<div id="section-reportes" class="section">
+  <div class="ciclo-selector">
+    <label>📅 Ciclo:</label>
+    <select class="form-control" id="sel-ciclo-rep" onchange="loadReportesSection()" style="min-width:160px;"></select>
+    <label>🎓 Grado:</label>
+    <select class="form-control" id="sel-grado-rep" onchange="loadReportesSection()" style="min-width:130px;">
+      <option value="">Todos</option>
+      <option value="1">1° Grado</option>
+      <option value="2">2° Grado</option>
+      <option value="3">3° Grado</option>
+    </select>
+    <button class="btn btn-danger btn-sm" onclick="exportarReportePDF()">📥 Descargar PDF</button>
+  </div>
+
+  <div class="grid-4" id="stats-reportes" style="margin-bottom:16px;">
+    <div class="stat-card verde"><div class="stat-num" id="rep-total-asist">—</div><div class="stat-label">Total Asistencias</div></div>
+    <div class="stat-card rojo"><div class="stat-num" id="rep-total-faltas">—</div><div class="stat-label">Total Faltas</div></div>
+    <div class="stat-card amarillo"><div class="stat-num" id="rep-total-retardos">—</div><div class="stat-label">Total Retardos</div></div>
+    <div class="stat-card naranja"><div class="stat-num" id="rep-pct-asist">—</div><div class="stat-label">% Asistencia</div></div>
+  </div>
+
+  <div class="report-tabs">
+    <button class="report-tab active" onclick="switchReportTab('mensual')">📅 Por Mes</button>
+    <button class="report-tab" onclick="switchReportTab('alumnos')">👧 Por Alumno</button>
+    <button class="report-tab" onclick="switchReportTab('alumno-mes')">📆 Alumno × Mes</button>
+    <button class="report-tab" onclick="switchReportTab('tendencia')">📈 Tendencia</button>
+    <button class="report-tab" onclick="switchReportTab('ranking')">🏆 Ranking Faltas</button>
+  </div>
+
+  <div id="report-tab-mensual" class="card">
+    <div class="card-header"><span class="card-icon">📊</span><div class="card-title">Faltas por Mes</div></div>
+    <div class="chart-container"><canvas id="chart-mensual"></canvas></div>
+  </div>
+  <div id="report-tab-alumnos" class="card" style="display:none;">
+    <div class="card-header"><span class="card-icon">👧</span><div class="card-title">Asistencia por Alumno</div></div>
+    <div class="chart-container"><canvas id="chart-alumnos"></canvas></div>
+    <div class="table-wrap" id="tabla-alumnos-rep" style="margin-top:14px;"></div>
+  </div>
+  <div id="report-tab-alumno-mes" class="card" style="display:none;">
+    <div class="card-header"><span class="card-icon">📆</span><div class="card-title">Asistencia por Alumno × Mes</div></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+      <label style="font-weight:700;font-size:.8rem;color:var(--azul);">👧 Alumno:</label>
+      <select class="form-control" id="sel-alumno-mes" onchange="renderAlumnoPorMes()" style="min-width:220px;"></select>
+      <button class="btn btn-danger btn-sm" onclick="exportarAlumnoPorMesPDF()">📥 PDF este alumno</button>
+    </div>
+    <div class="chart-container" style="height:240px;"><canvas id="chart-alumno-mes"></canvas></div>
+    <div class="table-wrap" id="tabla-alumno-mes" style="margin-top:16px;"></div>
+  </div>
+  <div id="report-tab-tendencia" class="card" style="display:none;">
+    <div class="card-header"><span class="card-icon">📈</span><div class="card-title">Tendencia de Asistencia</div></div>
+    <div class="chart-container"><canvas id="chart-tendencia"></canvas></div>
+  </div>
+  <div id="report-tab-ranking" class="card" style="display:none;">
+    <div class="card-header"><span class="card-icon">🏆</span><div class="card-title">Ranking de Inasistencias</div></div>
+    <div class="chart-container"><canvas id="chart-ranking"></canvas></div>
+    <div id="tabla-ranking" class="table-wrap" style="margin-top:14px;"></div>
+  </div>
+</div>
+
+<!-- ===== NFC / QR ===== -->
+<div id="section-nfc" class="section">
+  <div class="ciclo-selector">
+    <label>📅 Ciclo:</label>
+    <select class="form-control" id="sel-ciclo-nfc" onchange="loadNFCSection()" style="min-width:160px;"></select>
+    <button class="btn btn-primary btn-sm" onclick="imprimirTodosQR()">🖨️ Imprimir Todas</button>
+    <button class="btn btn-naranja btn-sm" onclick="abrirScanner()">📷 Escanear QR</button>
+  </div>
+
+  <div class="nfc-info">
+    <h4>📱 Instrucciones NFC/QR</h4>
+    <p>Cada alumno tiene un código QR único. Puedes imprimir etiquetas adhesivas o escribir el código en una etiqueta NFC con una app de escritura NFC. Al escanear el código (con la cámara o la etiqueta NFC), la asistencia se registra automáticamente para el día de hoy.</p>
+  </div>
+
+  <div id="scanner-section" style="display:none;margin-bottom:16px;">
+    <div class="card">
+      <div class="card-header"><span class="card-icon">📷</span><div class="card-title">Escáner QR en Vivo</div></div>
+      <div class="scanner-area">
+        <video id="scanner-video" autoplay playsinline></video>
+        <div class="scanner-overlay"><div class="scanner-frame"></div></div>
+      </div>
+      <div id="scanner-result" style="text-align:center;padding:12px;font-weight:700;"></div>
+      <button class="btn btn-danger btn-sm" onclick="cerrarScanner()" style="margin:8px auto;display:block;">Cerrar Escáner</button>
+    </div>
+  </div>
+
+  <div class="grado-tabs">
+    <button class="grado-tab active-all" onclick="filtrarGradoNFC('todos')">🎒 Todos</button>
+    <button class="grado-tab" onclick="filtrarGradoNFC('1')">1° Grado</button>
+    <button class="grado-tab" onclick="filtrarGradoNFC('2')">2° Grado</button>
+    <button class="grado-tab" onclick="filtrarGradoNFC('3')">3° Grado</button>
+  </div>
+
+  <div class="qr-grid" id="qr-grid"></div>
+</div>
+
+</div><!-- /main -->
+
+<!-- ===== MODALS ===== -->
+
+<!-- Modal: Nuevo Ciclo -->
+<div class="modal-overlay" id="modal-nuevo-ciclo">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📅 Nuevo Ciclo Escolar</div>
+      <button class="modal-close" onclick="closeModal('modal-nuevo-ciclo')">✕</button>
+    </div>
+    <input type="hidden" id="edit-ciclo-id">
+    <div class="form-group">
+      <label>Nombre del Ciclo (ej: 2024-2025)</label>
+      <input type="text" class="form-control" id="ciclo-nombre" placeholder="2024-2025">
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Fecha de Inicio</label>
+        <input type="date" class="form-control" id="ciclo-inicio">
+      </div>
+      <div class="form-group">
+        <label>Fecha de Fin</label>
+        <input type="date" class="form-control" id="ciclo-fin">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>📋 Cargar Calendario SEP Preestablecido</label>
+      <select class="form-control" id="ciclo-sep-preset" onchange="aplicarPresetSEP()">
+        <option value="">— Seleccionar Calendario SEP —</option>
+        <option value="2024-2025">SEP 2024-2025</option>
+        <option value="2025-2026">SEP 2025-2026</option>
+      </select>
+      <div style="font-size:.7rem;color:var(--texto2);margin-top:4px;">Al seleccionar, se llenan automáticamente las fechas y días especiales (CTE, suspensiones, evaluaciones, vacaciones).</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-nuevo-ciclo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarCiclo()">💾 Guardar Ciclo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nuevo Alumno -->
+<div class="modal-overlay" id="modal-nuevo-alumno">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">👧 <span id="modal-alumno-title">Nuevo Alumno</span></div>
+      <button class="modal-close" onclick="closeModal('modal-nuevo-alumno')">✕</button>
+    </div>
+    <input type="hidden" id="edit-alumno-id">
+    <div class="form-group">
+      <label>Nombre Completo</label>
+      <input type="text" class="form-control" id="alumno-nombre" placeholder="Apellido Apellido, Nombre(s)">
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Grado</label>
+        <select class="form-control" id="alumno-grado">
+          <option value="1">1° Grado</option>
+          <option value="2">2° Grado</option>
+          <option value="3">3° Grado</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Fecha de Nacimiento</label>
+        <input type="date" class="form-control" id="alumno-fnac">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>CURP (opcional)</label>
+      <input type="text" class="form-control" id="alumno-curp" placeholder="CURP del alumno" style="text-transform:uppercase;">
+    </div>
+    <div class="form-group">
+      <label>Ciclo Escolar</label>
+      <select class="form-control" id="alumno-ciclo"></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-nuevo-alumno')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarAlumno()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Marcar Asistencia Individual -->
+<div class="modal-overlay" id="modal-asistencia-ind">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">✅ Registrar Asistencia</div>
+      <button class="modal-close" onclick="closeModal('modal-asistencia-ind')">✕</button>
+    </div>
+    <input type="hidden" id="asist-alumno-id">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-family:'Fredoka One',sans-serif;font-size:1.2rem;color:var(--azul);" id="asist-alumno-nombre">—</div>
+      <div style="font-size:.75rem;color:var(--texto2);" id="asist-fecha-display">—</div>
+    </div>
+    <div class="asist-opciones">
+      <button class="asist-btn tipo-asistencia" onclick="selectEstado('asistencia')">
+        <span class="asist-icon">✅</span>Asistencia Puntual
+      </button>
+      <button class="asist-btn tipo-retardo" onclick="selectEstado('retardo')">
+        <span class="asist-icon">⏰</span>Retardo
+      </button>
+      <button class="asist-btn tipo-inasistencia" onclick="selectEstado('inasistencia')">
+        <span class="asist-icon">❌</span>Inasistencia
+      </button>
+      <button class="asist-btn tipo-inasistencia_justificada" onclick="selectEstado('inasistencia_justificada')">
+        <span class="asist-icon">📋</span>Inasistencia Justificada
+      </button>
+    </div>
+    <div id="form-retardo-hora" style="display:none;">
+      <div class="form-group">
+        <label>⏰ Hora de llegada</label>
+        <input type="time" class="form-control" id="asist-hora-llegada">
+      </div>
+    </div>
+    <div id="form-justificacion" style="display:none;">
+      <div class="form-group">
+        <label>📋 Motivo / Justificación</label>
+        <input type="text" class="form-control" id="asist-justificacion" placeholder="Ej: Cita médica, enfermedad...">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>📝 Notas (opcional)</label>
+      <input type="text" class="form-control" id="asist-nota" placeholder="Observación adicional...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="borrarAsistencia()">🗑️ Borrar</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-asistencia-ind')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarAsistenciaInd()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ausencia Docente -->
+<div class="modal-overlay" id="modal-ausencia-docente">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">👩‍🏫 Ausencia / Situación Docente</div>
+      <button class="modal-close" onclick="closeModal('modal-ausencia-docente')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>📅 Fecha</label>
+      <input type="date" class="form-control" id="ausencia-doc-fecha">
+    </div>
+    <div class="form-group">
+      <label>Tipo de Situación</label>
+      <select class="form-control" id="ausencia-doc-tipo">
+        <option value="">— Seleccionar —</option>
+        <option value="incapacidad">🏥 Incapacidad Médica</option>
+        <option value="permiso_economico">💼 Permiso Económico</option>
+        <option value="reunion_supervision">📋 Reunión en Supervisión</option>
+        <option value="reunion_sindical">🤝 Reunión Sindical</option>
+        <option value="comision">📄 Comisión Oficial</option>
+        <option value="otro">📝 Otro</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>📝 Notas / Observaciones</label>
+      <textarea class="form-control" id="ausencia-doc-nota" rows="3" placeholder="Detalles adicionales..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-ausencia-docente')">Cancelar</button>
+      <button class="btn btn-warning" onclick="guardarAusenciaDocente()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Día Especial -->
+<div class="modal-overlay" id="modal-dia-especial">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📆 Agregar Día Especial</div>
+      <button class="modal-close" onclick="closeModal('modal-dia-especial')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>📅 Fecha</label>
+      <input type="date" class="form-control" id="especial-fecha">
+    </div>
+    <div class="form-group">
+      <label>Tipo</label>
+      <select class="form-control" id="especial-tipo">
+        <option value="CTE">📘 Consejo Técnico Escolar (CTE)</option>
+        <option value="SUSPENSION">🚫 Suspensión Oficial</option>
+        <option value="EVALUACION">📝 Registro de Evaluaciones</option>
+        <option value="VACACIONES">🏖️ Vacaciones</option>
+        <option value="FESTIVO">🎉 Día Festivo</option>
+        <option value="OTRO">📌 Otro</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Descripción</label>
+      <input type="text" class="form-control" id="especial-descripcion" placeholder="Ej: Día de la Independencia">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-dia-especial')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarDiaEspecial()">💾 Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Configurar hora retardo -->
+<div class="modal-overlay" id="modal-config-hora">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⏰ Hora de Retardo</div>
+      <button class="modal-close" onclick="closeModal('modal-config-hora')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Hora a partir de la cual se considera RETARDO</label>
+      <input type="time" class="form-control" id="config-hora-retardo">
+      <div style="font-size:.72rem;color:var(--texto2);margin-top:4px;">Los alumnos que lleguen después de esta hora serán registrados como retardo.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-config-hora')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarConfigHora()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIF -->
+<div class="notif" id="notif"></div>
+
+<script>
+// ==================== LOGO ====================
+// Logo embedded directly in HTML img src
+// ==================== DATA ====================
+const DB_KEY='jtb_asistencia_v2';
+function loadDB(){try{return JSON.parse(localStorage.getItem(DB_KEY))||getEmptyDB();}catch{return getEmptyDB();}}
+function saveDB(db){localStorage.setItem(DB_KEY,JSON.stringify(db));}
+function getEmptyDB(){return{ciclos:[],alumnos:[],asistencia:{},ausenciasDocente:{},config:{horaRetardo:'08:30',cicloActivo:null}};}
+let DB=loadDB();
+
+// ==================== UTILS ====================
+function genId(){return 'id_'+Date.now()+'_'+Math.random().toString(36).substr(2,6);}
+function fmtFecha(d){if(!d)return '';const p=d.split('-');if(p.length<3)return d;const m=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];return p[2]+' de '+m[parseInt(p[1])-1]+' de '+p[0];}
+function fmtFechaCorta(d){if(!d)return '';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+function fechaHoy(){const h=new Date();return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');}
+function showNotif(msg,tipo=''){const n=document.getElementById('notif');n.textContent=msg;n.className='notif show '+(tipo||'');setTimeout(()=>{n.className='notif';},2800);}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function $(id){return document.getElementById(id);}
+
+// ==================== CALENDARIOS SEP PREESTABLECIDOS ====================
+function getDiasSpecialesSEP(ciclo){
+  const c={
+    '2024-2025':{
+      inicio:'2024-08-26',fin:'2025-07-11',
+      especiales:[
+        // Consejos Técnicos Escolares
+        {fecha:'2024-08-23',tipo:'CTE',desc:'Consejo Técnico Escolar (Intensivo)'},
+        {fecha:'2024-08-26',tipo:'CTE',desc:'Consejo Técnico Escolar (Intensivo)'},
+        {fecha:'2024-09-27',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2024-10-25',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2024-11-29',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2025-01-31',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2025-02-28',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2025-03-28',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2025-05-30',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2025-06-27',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        // Suspensiones / Festivos
+        {fecha:'2024-09-16',tipo:'SUSPENSION',desc:'Día de la Independencia de México'},
+        {fecha:'2024-11-18',tipo:'SUSPENSION',desc:'Día de la Revolución Mexicana (lunes observado)'},
+        {fecha:'2024-12-12',tipo:'SUSPENSION',desc:'Día de la Virgen de Guadalupe'},
+        {fecha:'2025-02-03',tipo:'SUSPENSION',desc:'Día de la Constitución (lunes observado)'},
+        {fecha:'2025-03-17',tipo:'SUSPENSION',desc:'Natalicio de Benito Juárez (lunes observado)'},
+        {fecha:'2025-05-01',tipo:'SUSPENSION',desc:'Día del Trabajo'},
+        {fecha:'2025-05-15',tipo:'SUSPENSION',desc:'Día del Maestro'},
+        // Evaluaciones / Cortes
+        {fecha:'2024-11-22',tipo:'EVALUACION',desc:'Registro de Evaluaciones 1er Corte'},
+        {fecha:'2025-03-21',tipo:'EVALUACION',desc:'Registro de Evaluaciones 2do Corte'},
+        {fecha:'2025-07-04',tipo:'EVALUACION',desc:'Registro de Evaluaciones 3er Corte'},
+        // Vacaciones Diciembre
+        {fecha:'2024-12-23',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2024-12-24',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2024-12-25',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2024-12-26',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2024-12-27',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2024-12-30',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2024-12-31',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2025-01-01',tipo:'VACACIONES',desc:'Año Nuevo'},
+        {fecha:'2025-01-02',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2025-01-03',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        // Semana Santa / Vacaciones Primavera
+        {fecha:'2025-04-14',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2025-04-15',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2025-04-16',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2025-04-17',tipo:'VACACIONES',desc:'Vacaciones de Primavera (Semana Santa)'},
+        {fecha:'2025-04-18',tipo:'VACACIONES',desc:'Vacaciones de Primavera (Viernes Santo)'},
+        {fecha:'2025-04-21',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2025-04-22',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2025-04-23',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2025-04-24',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2025-04-25',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+      ]
+    },
+    '2025-2026':{
+      inicio:'2025-08-25',fin:'2026-07-10',
+      especiales:[
+        {fecha:'2025-08-22',tipo:'CTE',desc:'Consejo Técnico Escolar (Intensivo)'},
+        {fecha:'2025-08-25',tipo:'CTE',desc:'Consejo Técnico Escolar (Intensivo)'},
+        {fecha:'2025-09-26',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2025-10-31',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2025-11-28',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2026-01-30',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2026-02-27',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2026-03-27',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2026-05-29',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2026-06-26',tipo:'CTE',desc:'Consejo Técnico Escolar'},
+        {fecha:'2025-09-16',tipo:'SUSPENSION',desc:'Día de la Independencia'},
+        {fecha:'2025-11-17',tipo:'SUSPENSION',desc:'Día de la Revolución Mexicana (lunes observado)'},
+        {fecha:'2025-12-12',tipo:'SUSPENSION',desc:'Día de la Virgen de Guadalupe'},
+        {fecha:'2026-02-02',tipo:'SUSPENSION',desc:'Día de la Constitución (lunes observado)'},
+        {fecha:'2026-03-16',tipo:'SUSPENSION',desc:'Natalicio de Benito Juárez (lunes observado)'},
+        {fecha:'2026-05-01',tipo:'SUSPENSION',desc:'Día del Trabajo'},
+        {fecha:'2026-05-15',tipo:'SUSPENSION',desc:'Día del Maestro'},
+        {fecha:'2025-11-21',tipo:'EVALUACION',desc:'Registro de Evaluaciones 1er Corte'},
+        {fecha:'2026-03-20',tipo:'EVALUACION',desc:'Registro de Evaluaciones 2do Corte'},
+        {fecha:'2026-07-03',tipo:'EVALUACION',desc:'Registro de Evaluaciones 3er Corte'},
+        {fecha:'2025-12-22',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2025-12-23',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2025-12-24',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2025-12-25',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2025-12-26',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2025-12-29',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2025-12-30',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2025-12-31',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2026-01-01',tipo:'VACACIONES',desc:'Año Nuevo'},
+        {fecha:'2026-01-02',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2026-04-06',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2026-04-07',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2026-04-08',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2026-04-09',tipo:'VACACIONES',desc:'Vacaciones de Primavera (Jueves Santo)'},
+        {fecha:'2026-04-10',tipo:'VACACIONES',desc:'Vacaciones de Primavera (Viernes Santo)'},
+        {fecha:'2026-04-13',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2026-04-14',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2026-04-15',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2026-04-16',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2026-04-17',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+      ]
+    }
+  };
+  return c[ciclo]||null;
+}
+
+function aplicarPresetSEP(){
+  const preset=$('ciclo-sep-preset').value;
+  if(!preset)return;
+  const data=getDiasSpecialesSEP(preset);
+  if(!data)return;
+  $('ciclo-nombre').value=preset;
+  $('ciclo-inicio').value=data.inicio;
+  $('ciclo-fin').value=data.fin;
+  showNotif('✅ Calendario SEP '+preset+' cargado','success');
+}
+
+// ==================== NAVEGACIÓN ====================
+let currentSection='dashboard';
+function showSection(s){
+  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  $('section-'+s).classList.add('active');
+  $('nav-'+s).classList.add('active');
+  currentSection=s;
+  if(s==='dashboard')renderDashboard();
+  if(s==='ciclos')renderCiclos();
+  if(s==='alumnos')loadAlumnosSection();
+  if(s==='asistencia')loadAsistenciaSection();
+  if(s==='calendario')loadCalendarioSection();
+  if(s==='reportes')loadReportesSection();
+  if(s==='nfc')loadNFCSection();
+}
+
+// ==================== FECHA HEADER ====================
+function updateHeader(){
+  const h=new Date();
+  const dias=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  $('fecha-hoy').textContent=dias[h.getDay()]+', '+h.getDate()+' de '+meses[h.getMonth()]+' '+h.getFullYear();
+  const ca=DB.ciclos.find(c=>c.id===DB.config.cicloActivo);
+  $('ciclo-badge-header').textContent=ca?'Ciclo '+ca.nombre:'Sin ciclo activo';
+}
+
+// ==================== DASHBOARD ====================
+function renderDashboard(){
+  updateHeader();
+  const hoy=fechaHoy();
+  const cicloActivo=DB.ciclos.find(c=>c.id===DB.config.cicloActivo)||DB.ciclos[0];
+  const alumnosCiclo=cicloActivo?DB.alumnos.filter(a=>a.cicloId===cicloActivo.id):[]; 
+  $('stat-alumnos').textContent=alumnosCiclo.length;
+  let pa=0,pf=0,pr=0;
+  alumnosCiclo.forEach(a=>{
+    const k=a.id+'_'+hoy;const rec=DB.asistencia[k];
+    if(rec){if(rec.estado==='asistencia'||rec.estado==='retardo')pa++;if(rec.estado==='inasistencia'||rec.estado==='inasistencia_justificada')pf++;if(rec.estado==='retardo')pr++;}
+  });
+  $('stat-hoy-asistencia').textContent=pa;
+  $('stat-hoy-faltas').textContent=pf;
+  $('stat-hoy-retardos').textContent=pr;
+  
+  if(cicloActivo){
+    $('dashboard-ciclo-info').innerHTML=`
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div><strong style="color:var(--azul);font-family:'Fredoka One',sans-serif;font-size:1.15rem;">📅 ${cicloActivo.nombre}</strong></div>
+        <div style="font-size:.78rem;color:var(--texto2);">⏩ Inicio: <strong>${fmtFecha(cicloActivo.inicio)}</strong></div>
+        <div style="font-size:.78rem;color:var(--texto2);">⏹ Fin: <strong>${fmtFecha(cicloActivo.fin)}</strong></div>
+        <div style="font-size:.78rem;color:var(--texto2);">👧 Alumnos: <strong>${alumnosCiclo.length}</strong></div>
+        <button class="btn btn-outline btn-sm" onclick="DB.config.cicloActivo='${cicloActivo.id}';saveDB(DB);showNotif('Ciclo activo actualizado','success');" style="margin-top:4px;width:fit-content;">Establecer como Activo</button>
+      </div>`;
+  }else{
+    $('dashboard-ciclo-info').innerHTML='<p style="color:var(--texto2);font-size:.82rem;">No hay ciclo escolar configurado.</p>';
+  }
+
+  if(cicloActivo){
+    const diaInfo=getDiaInfo(hoy,cicloActivo);
+    let html='<div style="font-size:.85rem;">';
+    if(diaInfo){
+      const badgeMap={CTE:'badge-azul',SUSPENSION:'badge-morado',EVALUACION:'badge-amarillo',VACACIONES:'badge-gris',FESTIVO:'badge-rojo'};
+      html+=`<div class="badge ${badgeMap[diaInfo.tipo]||'badge-azul'}" style="margin-bottom:8px;font-size:.75rem;">${diaInfo.tipo}</div><br>`;
+      html+=`<strong>${diaInfo.desc}</strong>`;
+    }else{
+      const d=new Date(hoy+'T12:00:00');
+      const dow=d.getDay();
+      if(dow===0||dow===6){html+='<span class="badge badge-gris">Fin de semana</span>';}
+      else{html+='<span class="badge badge-verde">✅ Día escolar normal</span>';}
+    }
+    html+='</div>';
+    $('dashboard-dia-info').innerHTML=html;
+  }
+}
+
+// ==================== CICLOS ESCOLARES ====================
+function renderCiclos(){
+  const cont=$('lista-ciclos');
+  if(!DB.ciclos.length){cont.innerHTML='<p style="color:var(--texto2);font-size:.85rem;padding:20px;text-align:center;">No hay ciclos escolares. Crea el primero con el botón ➕.</p>';return;}
+  cont.innerHTML=DB.ciclos.map(c=>{
+    const isActivo=DB.config.cicloActivo===c.id;
+    const alumnos=DB.alumnos.filter(a=>a.cicloId===c.id);
+    return`<div class="card" style="border-left:5px solid ${isActivo?'var(--verde)':'var(--gris3)'};">
+      <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="font-family:'Fredoka One',sans-serif;font-size:1.15rem;color:var(--azul);">📅 ${c.nombre}</span>
+            ${isActivo?'<span class="badge badge-verde">✅ Activo</span>':''}
+          </div>
+          <div style="font-size:.78rem;color:var(--texto2);display:flex;gap:16px;flex-wrap:wrap;">
+            <span>⏩ Inicio: <strong>${fmtFechaCorta(c.inicio)}</strong></span>
+            <span>⏹ Fin: <strong>${fmtFechaCorta(c.fin)}</strong></span>
+            <span>👧 Alumnos: <strong>${alumnos.length}</strong></span>
+            <span>📆 Días especiales: <strong>${(c.diasEspeciales||[]).length}</strong></span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${!isActivo?`<button class="btn btn-success btn-xs" onclick="activarCiclo('${c.id}')">✅ Activar</button>`:''}
+          <button class="btn btn-outline btn-xs" onclick="editarCiclo('${c.id}')">✏️ Editar</button>
+          <button class="btn btn-danger btn-xs" onclick="eliminarCiclo('${c.id}')">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openModal_nuevoCiclo(){
+  $('edit-ciclo-id').value='';
+  $('ciclo-nombre').value='';
+  $('ciclo-inicio').value='';
+  $('ciclo-fin').value='';
+  $('ciclo-sep-preset').value='';
+  openModal('modal-nuevo-ciclo');
+}
+
+function guardarCiclo(){
+  const nombre=$('ciclo-nombre').value.trim();
+  const inicio=$('ciclo-inicio').value;
+  const fin=$('ciclo-fin').value;
+  if(!nombre||!inicio||!fin){showNotif('⚠️ Completa todos los campos','error');return;}
+  const editId=$('edit-ciclo-id').value;
+  const preset=$('ciclo-sep-preset').value;
+  
+  if(editId){
+    const idx=DB.ciclos.findIndex(c=>c.id===editId);
+    if(idx>=0){DB.ciclos[idx].nombre=nombre;DB.ciclos[idx].inicio=inicio;DB.ciclos[idx].fin=fin;}
+  }else{
+    const diasEspeciales=preset?getDiasSpecialesSEP(preset).especiales.map(e=>({fecha:e.fecha,tipo:e.tipo,descripcion:e.desc})):[];
+    const nuevoCiclo={id:genId(),nombre,inicio,fin,diasEspeciales};
+    DB.ciclos.push(nuevoCiclo);
+    if(!DB.config.cicloActivo)DB.config.cicloActivo=nuevoCiclo.id;
+  }
+  saveDB(DB);closeModal('modal-nuevo-ciclo');renderCiclos();updateHeader();
+  showNotif('✅ Ciclo escolar guardado','success');
+}
+
+function activarCiclo(id){DB.config.cicloActivo=id;saveDB(DB);renderCiclos();updateHeader();showNotif('✅ Ciclo activado','success');}
+
+function editarCiclo(id){
+  const c=DB.ciclos.find(x=>x.id===id);if(!c)return;
+  $('edit-ciclo-id').value=id;
+  $('ciclo-nombre').value=c.nombre;
+  $('ciclo-inicio').value=c.inicio;
+  $('ciclo-fin').value=c.fin;
+  $('ciclo-sep-preset').value='';
+  openModal('modal-nuevo-ciclo');
+}
+
+function eliminarCiclo(id){
+  if(!confirm('¿Eliminar este ciclo escolar? Se perderán todos los registros asociados.'))return;
+  DB.ciclos=DB.ciclos.filter(c=>c.id!==id);
+  DB.alumnos=DB.alumnos.filter(a=>a.cicloId!==id);
+  if(DB.config.cicloActivo===id)DB.config.cicloActivo=DB.ciclos[0]?.id||null;
+  saveDB(DB);renderCiclos();showNotif('🗑️ Ciclo eliminado');
+}
+
+// ==================== ALUMNOS ====================
+let filtroGradoAlumnos='todos';
+
+function fillCicloSelects(){
+  const selects=['sel-ciclo-alumnos','sel-ciclo-asist','sel-ciclo-cal','sel-ciclo-rep','sel-ciclo-nfc','alumno-ciclo'];
+  selects.forEach(id=>{
+    const el=$(id);if(!el)return;
+    const val=el.value;
+    el.innerHTML=DB.ciclos.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+    if(DB.config.cicloActivo)el.value=DB.config.cicloActivo;
+    else if(val&&DB.ciclos.find(c=>c.id===val))el.value=val;
+  });
+}
+
+function loadAlumnosSection(){
+  fillCicloSelects();
+  const cicloId=$('sel-ciclo-alumnos').value;
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  $('info-ciclo-alumnos').textContent=ciclo?`${ciclo.nombre} · ${fmtFechaCorta(ciclo.inicio)} - ${fmtFechaCorta(ciclo.fin)}`:'';
+  renderAlumnos();
+}
+
+function filtrarGrado(g){
+  filtroGradoAlumnos=g;
+  document.querySelectorAll('#grado-filter-tabs .grado-tab').forEach(b=>{
+    b.className='grado-tab';
+    if((g==='todos'&&b.textContent.includes('Todos'))||(g!=='todos'&&b.textContent.includes(g+'°')))b.className='grado-tab active-'+(g==='todos'?'all':g);
+  });
+  renderAlumnos();
+}
+
+function renderAlumnos(){
+  const cicloId=$('sel-ciclo-alumnos').value;
+  const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId&&(filtroGradoAlumnos==='todos'||a.grado===filtroGradoAlumnos));
+  $('cnt-g1').textContent=DB.alumnos.filter(a=>a.cicloId===cicloId&&a.grado==='1').length;
+  $('cnt-g2').textContent=DB.alumnos.filter(a=>a.cicloId===cicloId&&a.grado==='2').length;
+  $('cnt-g3').textContent=DB.alumnos.filter(a=>a.cicloId===cicloId&&a.grado==='3').length;
+  const cont=$('lista-alumnos');
+  if(!alumnos.length){cont.innerHTML='<div class="card"><p style="text-align:center;color:var(--texto2);font-size:.85rem;padding:20px;">No hay alumnos registrados. Usa el botón ➕ para agregar.</p></div>';return;}
+  const gradoColor={1:'verde',2:'',3:'rojo'};
+  cont.innerHTML=alumnos.sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(a=>{
+    const initials=a.nombre.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+    return`<div class="alumno-card g${a.grado}">
+      <div class="alumno-avatar">${initials}</div>
+      <div class="alumno-info">
+        <div class="alumno-nombre">${a.nombre}</div>
+        <div class="alumno-meta">
+          <span class="badge badge-${a.grado==='1'?'verde':a.grado==='2'?'azul':'rojo'}">${a.grado}° Grado</span>
+          ${a.fechaNacimiento?` · Nac: ${fmtFechaCorta(a.fechaNacimiento)}`:''}
+          ${a.curp?` · CURP: ${a.curp}`:''}
+        </div>
+      </div>
+      <div class="alumno-actions">
+        <button class="btn btn-outline btn-xs" onclick="editarAlumno('${a.id}')">✏️</button>
+        <button class="btn btn-danger btn-xs" onclick="eliminarAlumno('${a.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openModalAlumno(){
+  fillCicloSelects();
+  $('edit-alumno-id').value='';
+  $('alumno-nombre').value='';
+  $('alumno-grado').value='1';
+  $('alumno-fnac').value='';
+  $('alumno-curp').value='';
+  $('modal-alumno-title').textContent='Nuevo Alumno';
+  openModal('modal-nuevo-alumno');
+}
+
+function editarAlumno(id){
+  const a=DB.alumnos.find(x=>x.id===id);if(!a)return;
+  fillCicloSelects();
+  $('edit-alumno-id').value=id;
+  $('alumno-nombre').value=a.nombre;
+  $('alumno-grado').value=a.grado;
+  $('alumno-fnac').value=a.fechaNacimiento||'';
+  $('alumno-curp').value=a.curp||'';
+  $('alumno-ciclo').value=a.cicloId;
+  $('modal-alumno-title').textContent='Editar Alumno';
+  openModal('modal-nuevo-alumno');
+}
+
+function guardarAlumno(){
+  const nombre=$('alumno-nombre').value.trim();
+  const grado=$('alumno-grado').value;
+  const fnac=$('alumno-fnac').value;
+  const curp=$('alumno-curp').value.trim().toUpperCase();
+  const cicloId=$('alumno-ciclo').value;
+  if(!nombre||!cicloId){showNotif('⚠️ El nombre y ciclo son obligatorios','error');return;}
+  const editId=$('edit-alumno-id').value;
+  if(editId){
+    const idx=DB.alumnos.findIndex(a=>a.id===editId);
+    if(idx>=0)Object.assign(DB.alumnos[idx],{nombre,grado,fechaNacimiento:fnac,curp,cicloId});
+  }else{
+    DB.alumnos.push({id:genId(),nombre,grado,fechaNacimiento:fnac,curp,cicloId,nfcId:genId()});
+  }
+  saveDB(DB);closeModal('modal-nuevo-alumno');renderAlumnos();showNotif('✅ Alumno guardado','success');
+}
+
+function eliminarAlumno(id){
+  if(!confirm('¿Eliminar a este alumno? Se perderán sus registros de asistencia.'))return;
+  DB.alumnos=DB.alumnos.filter(a=>a.id!==id);
+  Object.keys(DB.asistencia).filter(k=>k.startsWith(id+'_')).forEach(k=>delete DB.asistencia[k]);
+  saveDB(DB);renderAlumnos();showNotif('🗑️ Alumno eliminado');
+}
+
+function exportarListaAlumnos(){
+  const cicloId=$('sel-ciclo-alumnos').value;
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId).sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  doc.setFillColor(26,58,140);doc.rect(0,0,210,28,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(14);
+  doc.text('Jardín de Niños Jaime Torres Bodet',14,10);
+  doc.setFontSize(9);doc.text('Clave: 30EJN1426K · Xochitla, Ver. · Mtra. Carla Berenice Vilis Álvarez',14,17);
+  doc.text('Lista de Alumnos · Ciclo '+(ciclo?.nombre||'')+'  ·  Generado: '+new Date().toLocaleDateString('es-MX'),14,24);
+  doc.setTextColor(0,0,0);
+  doc.autoTable({startY:32,head:[['N°','Nombre','Grado','Fecha Nac.','CURP']],
+    body:alumnos.map((a,i)=>[i+1,a.nombre,a.grado+'° Grado',fmtFechaCorta(a.fechaNacimiento||''),a.curp||'']),
+    styles:{font:'helvetica',fontSize:9},headStyles:{fillColor:[26,58,140]},alternateRowStyles:{fillColor:[240,244,252]}});
+  doc.save('Lista_Alumnos_JTB_'+(ciclo?.nombre||'')+'.pdf');
+  showNotif('📥 PDF descargado','success');
+}
+
+// ==================== ASISTENCIA ====================
+let filtroGradoAsist='todos';
+let estadoSeleccionado=null;
+
+function loadAsistenciaSection(){
+  fillCicloSelects();
+  if(!$('fecha-asist').value)$('fecha-asist').value=fechaHoy();
+  loadAsistenciaFecha();
+}
+
+function marcarHoy(){$('fecha-asist').value=fechaHoy();loadAsistenciaFecha();}
+
+function filtrarGradoAsist(g){
+  filtroGradoAsist=g;
+  document.querySelectorAll('#asist-grado-tabs .grado-tab').forEach(b=>{
+    b.className='grado-tab';
+    if((g==='todos'&&b.textContent==='Todos')||(g!=='todos'&&b.textContent===g+'°'))b.className='grado-tab active-'+(g==='todos'?'all':g);
+  });
+  renderAsistenciaLista();
+}
+
+function loadAsistenciaFecha(){
+  const cicloId=$('sel-ciclo-asist').value;
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  const fecha=$('fecha-asist').value;
+  if(!cicloId||!fecha||!ciclo)return;
+
+  // ===== BLOQUEO FIN DE SEMANA =====
+  const dow=new Date(fecha+'T12:00:00').getDay(); // 0=Dom, 6=Sáb
+  const avisoDiv=$('dia-especial-aviso');
+  const listaDiv=$('lista-asistencia-dia');
+  const resumenDiv=$('resumen-dia-asistencia');
+  const barrasDiv=document.querySelector('.date-selector-bar');
+  if(dow===0||dow===6){
+    const nombreDia=dow===0?'Domingo':'Sábado';
+    avisoDiv.innerHTML=`<div style="background:var(--texto);color:white;border-radius:var(--radius-sm);padding:16px 18px;font-weight:700;font-size:.88rem;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:2rem;">🚫</span>
+      <div>
+        <div style="font-size:1rem;margin-bottom:3px;">${nombreDia} — Día no escolar</div>
+        <div style="font-weight:400;font-size:.78rem;opacity:.85;">Los sábados y domingos no son días hábiles. No se puede registrar asistencia. Selecciona un día de lunes a viernes.</div>
+      </div>
+    </div>`;
+    avisoDiv.style.display='block';
+    listaDiv.innerHTML='';
+    resumenDiv.style.opacity='0.35';
+    $('ausencia-docente-bar').style.display='none';
+    return;
+  }
+  resumenDiv.style.opacity='1';
+  // ===== FIN BLOQUEO =====
+
+  // Check día especial
+  const diaInfo=getDiaInfo(fecha,ciclo);
+  if(diaInfo){
+    const colorMap={CTE:'var(--azul2)',SUSPENSION:'var(--morado)',EVALUACION:'var(--amarillo)',VACACIONES:'var(--texto2)',FESTIVO:'var(--rojo)'};
+    avisoDiv.innerHTML=`<div style="background:${colorMap[diaInfo.tipo]||'var(--azul)'};color:white;border-radius:var(--radius-sm);padding:12px 16px;font-weight:700;font-size:.82rem;">
+      ⚠️ ${diaInfo.tipo}: ${diaInfo.desc} · Este es un día no escolar o especial.</div>`;
+    avisoDiv.style.display='block';
+  }else{avisoDiv.style.display='none';}
+
+  // Ausencia docente
+  const ausDoc=DB.ausenciasDocente[fecha];
+  const ausBat=$('ausencia-docente-bar');
+  if(ausDoc){
+    const tipoLabel={incapacidad:'🏥 Incapacidad',permiso_economico:'💼 Permiso Económico',reunion_supervision:'📋 Reunión en Supervisión',reunion_sindical:'🤝 Reunión Sindical',comision:'📄 Comisión',otro:'📝 Otro'};
+    ausBat.innerHTML=`<div style="background:var(--naranja);color:white;border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-weight:700;font-size:.82rem;">👩‍🏫 Situación docente: ${tipoLabel[ausDoc.tipo]||ausDoc.tipo}</span>
+      ${ausDoc.nota?`<span style="font-size:.75rem;opacity:.9;">· ${ausDoc.nota}</span>`:''}
+      <button class="btn btn-xs" style="background:rgba(0,0,0,.2);color:white;margin-left:auto;" onclick="borrarAusenciaDocente('${fecha}')">Quitar</button>
+    </div>`;
+    ausBat.style.display='block';
+  }else{ausBat.style.display='none';}
+
+  $('hora-retardo-display').textContent=DB.config.horaRetardo||'08:30';
+  renderAsistenciaLista();
+  renderResumenDia();
+}
+
+function getDiaInfo(fecha,ciclo){
+  if(!ciclo||!ciclo.diasEspeciales)return null;
+  return ciclo.diasEspeciales.find(d=>d.fecha===fecha)||null;
+}
+
+function renderResumenDia(){
+  const cicloId=$('sel-ciclo-asist').value;
+  const fecha=$('fecha-asist').value;
+  const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId);
+  let pa=0,pr=0,pf=0,pj=0;
+  alumnos.forEach(a=>{
+    const r=DB.asistencia[a.id+'_'+fecha];
+    if(r){
+      if(r.estado==='asistencia')pa++;
+      else if(r.estado==='retardo')pr++;
+      else if(r.estado==='inasistencia')pf++;
+      else if(r.estado==='inasistencia_justificada')pj++;
+    }
+  });
+  $('rd-asistencia').textContent=pa;$('rd-retardo').textContent=pr;
+  $('rd-falta').textContent=pf;$('rd-justif').textContent=pj;
+  $('rd-total').textContent=alumnos.length;
+}
+
+function renderAsistenciaLista(){
+  const cicloId=$('sel-ciclo-asist').value;
+  const fecha=$('fecha-asist').value;
+  if(!cicloId||!fecha){return;}
+  const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId&&(filtroGradoAsist==='todos'||a.grado===filtroGradoAsist))
+    .sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
+  const cont=$('lista-asistencia-dia');
+  if(!alumnos.length){cont.innerHTML='<p style="text-align:center;color:var(--texto2);padding:20px;font-size:.85rem;">No hay alumnos en este ciclo. Ve a la sección Alumnos para agregar.</p>';return;}
+  
+  const estadoInfo={
+    asistencia:{label:'✅ Puntual',cls:'badge-verde',rowcls:'asistencia'},
+    retardo:{label:'⏰ Retardo',cls:'badge-amarillo',rowcls:'retardo'},
+    inasistencia:{label:'❌ Falta',cls:'badge-rojo',rowcls:'inasistencia'},
+    inasistencia_justificada:{label:'📋 Justificada',cls:'badge-naranja',rowcls:'inasistencia_justificada'},
+  };
+  
+  let gradoActual='';
+  cont.innerHTML=alumnos.map(a=>{
+    const k=a.id+'_'+fecha;
+    const rec=DB.asistencia[k];
+    const ei=rec&&estadoInfo[rec.estado]?estadoInfo[rec.estado]:null;
+    let html='';
+    if(a.grado!==gradoActual){
+      gradoActual=a.grado;
+      const gc={1:'verde',2:'azul',3:'rojo'};
+      html+=`<div style="margin:10px 0 4px;font-family:'Fredoka One',sans-serif;font-size:.9rem;color:var(--${gc[a.grado]||'azul'});">${a.grado}° Grado</div>`;
+    }
+    const initials=a.nombre.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+    html+=`<div class="asist-row ${ei?ei.rowcls:''}" style="cursor:pointer;" onclick="openAsistenciaModal('${a.id}','${fecha}')">
+      <div style="width:32px;height:32px;border-radius:50%;background:${a.grado==='1'?'var(--verde)':a.grado==='2'?'var(--azul2)':'var(--rojo2)'};color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.75rem;flex-shrink:0;">${initials}</div>
+      <div class="asist-nombre">${a.nombre}</div>
+      ${ei?`<span class="badge ${ei.cls}">${ei.label}</span>${rec.hora?`<span style="font-size:.68rem;color:var(--texto2);">${rec.hora}</span>`:''}`:'<span class="badge badge-gris">Sin registro</span>'}
+      <span style="font-size:1rem;opacity:.4;">›</span>
+    </div>`;
+    return html;
+  }).join('');
+}
+
+function openAsistenciaModal(alumnoId,fecha){
+  const a=DB.alumnos.find(x=>x.id===alumnoId);if(!a)return;
+  $('asist-alumno-id').value=alumnoId;
+  $('asist-alumno-nombre').textContent=a.nombre;
+  $('asist-fecha-display').textContent=fmtFecha(fecha)+' · '+a.grado+'° Grado';
+  // Reset buttons
+  document.querySelectorAll('.asist-btn').forEach(b=>b.classList.remove('selected'));
+  estadoSeleccionado=null;
+  $('form-retardo-hora').style.display='none';
+  $('form-justificacion').style.display='none';
+  $('asist-hora-llegada').value='';
+  $('asist-justificacion').value='';
+  $('asist-nota').value='';
+  // Load existing
+  const rec=DB.asistencia[alumnoId+'_'+fecha];
+  if(rec){
+    selectEstado(rec.estado,false);
+    if(rec.hora)$('asist-hora-llegada').value=rec.hora;
+    if(rec.justificacion)$('asist-justificacion').value=rec.justificacion;
+    if(rec.nota)$('asist-nota').value=rec.nota;
+  }
+  openModal('modal-asistencia-ind');
+}
+
+function selectEstado(estado,save=false){
+  estadoSeleccionado=estado;
+  document.querySelectorAll('.asist-btn').forEach(b=>b.classList.remove('selected'));
+  const btnMap={asistencia:'tipo-asistencia',retardo:'tipo-retardo',inasistencia:'tipo-inasistencia',inasistencia_justificada:'tipo-inasistencia_justificada'};
+  document.querySelectorAll('.'+btnMap[estado]).forEach(b=>b.classList.add('selected'));
+  $('form-retardo-hora').style.display=(estado==='retardo')?'block':'none';
+  $('form-justificacion').style.display=(estado==='inasistencia_justificada'||estado==='inasistencia')?'block':'none';
+}
+
+function guardarAsistenciaInd(){
+  if(!estadoSeleccionado){showNotif('⚠️ Selecciona un estado','error');return;}
+  const alumnoId=$('asist-alumno-id').value;
+  const fecha=$('fecha-asist').value;
+  const hora=$('asist-hora-llegada').value;
+  const justificacion=$('asist-justificacion').value;
+  const nota=$('asist-nota').value;
+  DB.asistencia[alumnoId+'_'+fecha]={estado:estadoSeleccionado,hora,justificacion,nota};
+  saveDB(DB);closeModal('modal-asistencia-ind');renderAsistenciaLista();renderResumenDia();
+  showNotif('✅ Asistencia guardada','success');
+}
+
+function borrarAsistencia(){
+  const alumnoId=$('asist-alumno-id').value;
+  const fecha=$('fecha-asist').value;
+  delete DB.asistencia[alumnoId+'_'+fecha];
+  saveDB(DB);closeModal('modal-asistencia-ind');renderAsistenciaLista();renderResumenDia();
+  showNotif('🗑️ Registro borrado');
+}
+
+function marcarTodosPresentes(){
+  const cicloId=$('sel-ciclo-asist').value;
+  const fecha=$('fecha-asist').value;
+  const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId&&(filtroGradoAsist==='todos'||a.grado===filtroGradoAsist));
+  let cnt=0;
+  alumnos.forEach(a=>{
+    if(!DB.asistencia[a.id+'_'+fecha]){DB.asistencia[a.id+'_'+fecha]={estado:'asistencia',hora:'',justificacion:'',nota:''};cnt++;}
+  });
+  saveDB(DB);renderAsistenciaLista();renderResumenDia();
+  showNotif(`✅ ${cnt} alumnos marcados como presentes`,'success');
+}
+
+function openModalAusenciaDocente(){$('ausencia-doc-fecha').value=$('fecha-asist').value;openModal('modal-ausencia-docente');}
+
+function guardarAusenciaDocente(){
+  const fecha=$('ausencia-doc-fecha').value;
+  const tipo=$('ausencia-doc-tipo').value;
+  const nota=$('ausencia-doc-nota').value;
+  if(!fecha||!tipo){showNotif('⚠️ Selecciona fecha y tipo','error');return;}
+  DB.ausenciasDocente[fecha]={tipo,nota};
+  saveDB(DB);closeModal('modal-ausencia-docente');loadAsistenciaFecha();
+  showNotif('✅ Situación docente guardada','success');
+}
+
+function borrarAusenciaDocente(fecha){delete DB.ausenciasDocente[fecha];saveDB(DB);loadAsistenciaFecha();}
+
+function openModalConfigHora(){$('config-hora-retardo').value=DB.config.horaRetardo||'08:30';openModal('modal-config-hora');}
+
+function guardarConfigHora(){
+  DB.config.horaRetardo=$('config-hora-retardo').value||'08:30';
+  saveDB(DB);closeModal('modal-config-hora');
+  $('hora-retardo-display').textContent=DB.config.horaRetardo;
+  showNotif('✅ Hora de retardo actualizada','success');
+}
+
+function exportarAsistenciaDia(){
+  const cicloId=$('sel-ciclo-asist').value;
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  const fecha=$('fecha-asist').value;
+  const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId).sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  doc.setFillColor(26,58,140);doc.rect(0,0,210,28,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(13);
+  doc.text('Jardín de Niños Jaime Torres Bodet · 30EJN1426K',14,10);
+  doc.setFontSize(9);doc.text('Registro de Asistencia · '+fmtFecha(fecha)+' · Ciclo '+(ciclo?.nombre||''),14,18);
+  doc.text('Mtra. Carla Berenice Vilis Álvarez · Xochitla, Ver.',14,24);
+  doc.setTextColor(0,0,0);
+  const estadoLabel={asistencia:'Puntual',retardo:'Retardo',inasistencia:'Falta',inasistencia_justificada:'Just.'};
+  doc.autoTable({startY:32,
+    head:[['N°','Nombre','Grado','Estado','Hora','Observaciones']],
+    body:alumnos.map((a,i)=>{
+      const r=DB.asistencia[a.id+'_'+fecha];
+      return[i+1,a.nombre,a.grado+'°',r?estadoLabel[r.estado]||r.estado:'Sin registro',r?.hora||'',r?.nota||''];
+    }),
+    styles:{fontSize:8},headStyles:{fillColor:[26,58,140]},alternateRowStyles:{fillColor:[240,244,252]}
+  });
+  doc.save('Asistencia_JTB_'+fecha+'.pdf');showNotif('📥 PDF descargado','success');
+}
+
+// ==================== CALENDARIO ESCOLAR ====================
+let calMes=new Date().getMonth();
+let calAnio=new Date().getFullYear();
+
+function loadCalendarioSection(){
+  fillCicloSelects();
+  renderCalendario();
+  renderListaDiasEspeciales();
+}
+
+function calPrev(){calMes--;if(calMes<0){calMes=11;calAnio--;}renderCalendario();}
+function calNext(){calMes++;if(calMes>11){calMes=0;calAnio++;}renderCalendario();}
+
+function renderCalendario(){
+  const cicloId=$('sel-ciclo-cal').value;
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  $('cal-titulo').textContent=meses[calMes]+' '+calAnio;
+  const grid=$('calendario-grid');
+  const dias=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  let html=dias.map(d=>`<div class="cal-day-header">${d}</div>`).join('');
+  const primerDia=new Date(calAnio,calMes,1).getDay();
+  for(let i=0;i<primerDia;i++)html+=`<div class="cal-day empty"></div>`;
+  const ultimoDia=new Date(calAnio,calMes+1,0).getDate();
+  const hoy=fechaHoy();
+  for(let d=1;d<=ultimoDia;d++){
+    const fechaStr=calAnio+'-'+String(calMes+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const dow=new Date(calAnio,calMes,d).getDay();
+    const esHoy=fechaStr===hoy;
+    const esFinde=dow===0||dow===6;
+    let cls='cal-day';
+    let dot='';let title='';
+    if(esFinde){cls+=' finde';}
+    if(ciclo){
+      const dinfo=getDiaInfo(fechaStr,ciclo);
+      if(dinfo){cls+=' '+dinfo.tipo;title=dinfo.desc;dot='<div class="dia-dot"></div>';}
+      const ausDoc=DB.ausenciasDocente[fechaStr];
+      if(ausDoc){cls+=' DOCENTE';title='Ausencia docente';}
+    }
+    if(esHoy)cls+=' hoy';
+    html+=`<div class="${cls}" title="${title}" ${!esFinde?`onclick="verDiaCalendario('${fechaStr}')"`:''}><div class="dia-num">${d}</div>${dot}</div>`;
+  }
+  grid.innerHTML=html;
+}
+
+function verDiaCalendario(fecha){
+  showSection('asistencia');
+  $('sel-ciclo-asist').value=$('sel-ciclo-cal').value;
+  $('fecha-asist').value=fecha;
+  loadAsistenciaFecha();
+}
+
+function renderListaDiasEspeciales(){
+  const cicloId=$('sel-ciclo-cal').value;
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  const cont=$('lista-dias-especiales');
+  if(!ciclo||!ciclo.diasEspeciales||!ciclo.diasEspeciales.length){
+    cont.innerHTML='<p style="color:var(--texto2);font-size:.82rem;padding:8px;">No hay días especiales registrados. Los calendarios SEP se cargan al crear un ciclo.</p>';return;
+  }
+  const sorted=[...ciclo.diasEspeciales].sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  cont.innerHTML=sorted.map((d,i)=>`
+    <div class="dia-especial-item">
+      <span class="dia-especial-tipo tipo-${d.tipo}">${d.tipo}</span>
+      <span style="font-weight:700;font-size:.8rem;min-width:100px;">${fmtFechaCorta(d.fecha)}</span>
+      <span style="font-size:.8rem;flex:1;color:var(--texto2);">${d.descripcion}</span>
+      <button class="btn btn-danger btn-xs" onclick="eliminarDiaEspecial('${cicloId}',${i})">🗑️</button>
+    </div>`).join('');
+}
+
+function openModalDiaEspecial(){
+  $('especial-fecha').value=fechaHoy();
+  $('especial-descripcion').value='';
+  openModal('modal-dia-especial');
+}
+
+function guardarDiaEspecial(){
+  const fecha=$('especial-fecha').value;
+  const tipo=$('especial-tipo').value;
+  const descripcion=$('especial-descripcion').value.trim();
+  const cicloId=$('sel-ciclo-cal').value;
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  if(!fecha||!tipo||!descripcion||!ciclo){showNotif('⚠️ Completa todos los campos','error');return;}
+  if(!ciclo.diasEspeciales)ciclo.diasEspeciales=[];
+  ciclo.diasEspeciales.push({fecha,tipo,descripcion});
+  saveDB(DB);closeModal('modal-dia-especial');renderCalendario();renderListaDiasEspeciales();
+  showNotif('✅ Día especial agregado','success');
+}
+
+function eliminarDiaEspecial(cicloId,idx){
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  if(!ciclo)return;
+  ciclo.diasEspeciales.splice(idx,1);
+  saveDB(DB);renderCalendario();renderListaDiasEspeciales();
+  showNotif('🗑️ Día especial eliminado');
+}
+
+// ==================== REPORTES ====================
+let chartMensual,chartAlumnos,chartTendencia,chartRanking;
+let currentReportTab='mensual';
+
+function switchReportTab(tab){
+  currentReportTab=tab;
+  ['mensual','alumnos','alumno-mes','tendencia','ranking'].forEach(t=>{
+    $('report-tab-'+t).style.display=(t===tab)?'block':'none';
+  });
+  document.querySelectorAll('.report-tab').forEach((b,i)=>{
+    const tabs=['mensual','alumnos','alumno-mes','tendencia','ranking'];
+    b.classList.toggle('active',tabs[i]===tab);
+  });
+  renderReporteTab(tab);
+}
+
+function loadReportesSection(){
+  fillCicloSelects();
+  // Populate alumno selector for the new tab
+  const cicloId=$('sel-ciclo-rep').value;
+  const selAlumno=$('sel-alumno-mes');
+  if(selAlumno){
+    const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId).sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
+    selAlumno.innerHTML='<option value="">— Selecciona un alumno —</option>'+alumnos.map(a=>`<option value="${a.id}">${a.grado}° · ${a.nombre}</option>`).join('');
+  }
+  renderStatsReportes();
+  renderReporteTab(currentReportTab);
+}
+
+function getAlumnosFiltrados(){
+  const cicloId=$('sel-ciclo-rep').value;
+  const grado=$('sel-grado-rep').value;
+  return DB.alumnos.filter(a=>a.cicloId===cicloId&&(!grado||a.grado===grado));
+}
+
+function getAsistenciaStats(alumnoId,cicloId){
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  if(!ciclo)return{asistencia:0,retardo:0,inasistencia:0,justificada:0,total:0};
+  let a=0,r=0,f=0,j=0,total=0;
+  Object.keys(DB.asistencia).forEach(k=>{
+    if(!k.startsWith(alumnoId+'_'))return;
+    const fecha=k.split('_').slice(1).join('_');
+    if(fecha<ciclo.inicio||fecha>ciclo.fin)return;
+    const rec=DB.asistencia[k];
+    total++;
+    if(rec.estado==='asistencia')a++;
+    else if(rec.estado==='retardo')r++;
+    else if(rec.estado==='inasistencia')f++;
+    else if(rec.estado==='inasistencia_justificada')j++;
+  });
+  return{asistencia:a,retardo:r,inasistencia:f,justificada:j,total};
+}
+
+function renderStatsReportes(){
+  const alumnos=getAlumnosFiltrados();
+  let ta=0,tf=0,tr=0,total=0;
+  alumnos.forEach(a=>{
+    const s=getAsistenciaStats(a.id,$('sel-ciclo-rep').value);
+    ta+=s.asistencia;tf+=s.inasistencia+s.justificada;tr+=s.retardo;total+=s.total;
+  });
+  $('rep-total-asist').textContent=ta;
+  $('rep-total-faltas').textContent=tf;
+  $('rep-total-retardos').textContent=tr;
+  $('rep-pct-asist').textContent=total?Math.round((ta+tr)/total*100)+'%':'—';
+}
+
+function getFaltasPorMes(){
+  const alumnos=getAlumnosFiltrados();
+  const cicloId=$('sel-ciclo-rep').value;
+  const meses={};
+  const mNom=['Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar','Abr','May','Jun','Jul'];
+  const mKeys=['08','09','10','11','12','01','02','03','04','05','06','07'];
+  mKeys.forEach((m,i)=>meses[m]={label:mNom[i],asistencia:0,inasistencia:0,retardo:0});
+  alumnos.forEach(a=>{
+    Object.keys(DB.asistencia).forEach(k=>{
+      if(!k.startsWith(a.id+'_'))return;
+      const fecha=k.split('_')[1];if(!fecha)return;
+      const mes=fecha.split('-')[1];
+      if(!meses[mes])return;
+      const r=DB.asistencia[k];
+      if(r.estado==='asistencia')meses[mes].asistencia++;
+      else if(r.estado==='inasistencia'||r.estado==='inasistencia_justificada')meses[mes].inasistencia++;
+      else if(r.estado==='retardo')meses[mes].retardo++;
+    });
+  });
+  return mKeys.filter(m=>meses[m]).map(m=>({label:meses[m].label,...meses[m]}));
+}
+
+function renderReporteTab(tab){
+  if(tab==='mensual'){
+    const data=getFaltasPorMes();
+    if(chartMensual)chartMensual.destroy();
+    const ctx=$('chart-mensual').getContext('2d');
+    chartMensual=new Chart(ctx,{type:'bar',data:{
+      labels:data.map(d=>d.label),
+      datasets:[
+        {label:'Asistencias',data:data.map(d=>d.asistencia),backgroundColor:'rgba(29,138,60,.7)',borderColor:'#1d8a3c',borderWidth:1.5},
+        {label:'Faltas',data:data.map(d=>d.inasistencia),backgroundColor:'rgba(192,24,30,.7)',borderColor:'#c0181e',borderWidth:1.5},
+        {label:'Retardos',data:data.map(d=>d.retardo),backgroundColor:'rgba(240,165,0,.7)',borderColor:'#f0a500',borderWidth:1.5}
+      ]
+    },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{x:{grid:{display:false}},y:{beginAtZero:true}}}});
+  }else if(tab==='alumnos'){
+    const alumnos=getAlumnosFiltrados().sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    const cicloId=$('sel-ciclo-rep').value;
+    const stats=alumnos.map(a=>({a,s:getAsistenciaStats(a.id,cicloId)}));
+    if(chartAlumnos)chartAlumnos.destroy();
+    const ctx=$('chart-alumnos').getContext('2d');
+    chartAlumnos=new Chart(ctx,{type:'bar',data:{
+      labels:alumnos.map(a=>a.nombre.split(' ')[0]),
+      datasets:[
+        {label:'Asistencias',data:stats.map(x=>x.s.asistencia),backgroundColor:'rgba(29,138,60,.7)'},
+        {label:'Faltas',data:stats.map(x=>x.s.inasistencia),backgroundColor:'rgba(192,24,30,.7)'},
+      ]
+    },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}}}});
+    const cont=$('tabla-alumnos-rep');
+    cont.innerHTML=`<table><thead><tr><th>N°</th><th>Nombre</th><th>Grado</th><th>Asistencias</th><th>Retardos</th><th>Faltas</th><th>Just.</th><th>% Asist.</th></tr></thead>
+      <tbody>${stats.map((x,i)=>{const pct=x.s.total?Math.round((x.s.asistencia+x.s.retardo)/x.s.total*100):0;
+        return`<tr><td>${i+1}</td><td>${x.a.nombre}</td><td>${x.a.grado}°</td><td><span class="badge badge-verde">${x.s.asistencia}</span></td><td><span class="badge badge-amarillo">${x.s.retardo}</span></td><td><span class="badge badge-rojo">${x.s.inasistencia}</span></td><td><span class="badge badge-naranja">${x.s.justificada}</span></td><td><strong>${pct}%</strong></td></tr>`;
+      }).join('')}</tbody></table>`;
+  }else if(tab==='alumno-mes'){
+    renderAlumnoPorMes();
+  }else if(tab==='tendencia'){
+    const data=getFaltasPorMes();
+    if(chartTendencia)chartTendencia.destroy();
+    const ctx=$('chart-tendencia').getContext('2d');
+    const total=data.map(d=>d.asistencia+d.inasistencia+d.retardo||1);
+    chartTendencia=new Chart(ctx,{type:'line',data:{
+      labels:data.map(d=>d.label),
+      datasets:[{
+        label:'% Asistencia',
+        data:data.map((d,i)=>Math.round((d.asistencia+d.retardo)/total[i]*100)),
+        borderColor:'#1a3a8c',backgroundColor:'rgba(26,58,140,.1)',borderWidth:2.5,fill:true,tension:.4,pointBackgroundColor:'#1a3a8c'
+      }]
+    },options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}});
+  }else if(tab==='ranking'){
+    const alumnos=getAlumnosFiltrados();
+    const cicloId=$('sel-ciclo-rep').value;
+    const stats=alumnos.map(a=>({a,s:getAsistenciaStats(a.id,cicloId)})).sort((x,y)=>(y.s.inasistencia+y.s.justificada)-(x.s.inasistencia+x.s.justificada));
+    if(chartRanking)chartRanking.destroy();
+    const top10=stats.slice(0,10);
+    const ctx=$('chart-ranking').getContext('2d');
+    chartRanking=new Chart(ctx,{type:'bar',data:{
+      labels:top10.map(x=>x.a.nombre.split(' ').slice(0,2).join(' ')),
+      datasets:[{label:'Total Faltas',data:top10.map(x=>x.s.inasistencia+x.s.justificada),backgroundColor:top10.map((_,i)=>`hsl(${i*25},70%,55%)`)}]
+    },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    $('tabla-ranking').innerHTML=`<table><thead><tr><th>#</th><th>Nombre</th><th>Grado</th><th>Total Faltas</th><th>Sin Justif.</th><th>Justificadas</th></tr></thead>
+      <tbody>${stats.map((x,i)=>`<tr><td><strong>${i+1}</strong></td><td>${x.a.nombre}</td><td>${x.a.grado}°</td><td><span class="badge badge-rojo">${x.s.inasistencia+x.s.justificada}</span></td><td>${x.s.inasistencia}</td><td>${x.s.justificada}</td></tr>`).join('')}</tbody></table>`;
+  }
+}
+
+// ---- REPORTE ALUMNO × MES ----
+let chartAlumnoMes=null;
+
+function getStatsPorMesAlumno(alumnoId,cicloId){
+  const mNom=['Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar','Abr','May','Jun','Jul'];
+  const mKeys=['08','09','10','11','12','01','02','03','04','05','06','07'];
+  const meses={};
+  mKeys.forEach((m,i)=>meses[m]={label:mNom[i],key:m,asistencia:0,retardo:0,inasistencia:0,justificada:0,total:0});
+  Object.keys(DB.asistencia).forEach(k=>{
+    if(!k.startsWith(alumnoId+'_'))return;
+    const fecha=k.split('_')[1];if(!fecha)return;
+    const mes=fecha.split('-')[1];
+    if(!meses[mes])return;
+    const r=DB.asistencia[k];
+    meses[mes].total++;
+    if(r.estado==='asistencia')meses[mes].asistencia++;
+    else if(r.estado==='retardo')meses[mes].retardo++;
+    else if(r.estado==='inasistencia')meses[mes].inasistencia++;
+    else if(r.estado==='inasistencia_justificada')meses[mes].justificada++;
+  });
+  return mKeys.map(m=>meses[m]);
+}
+
+function renderAlumnoPorMes(){
+  const alumnoId=$('sel-alumno-mes').value;
+  const cont=$('tabla-alumno-mes');
+  const ctx=$('chart-alumno-mes').getContext('2d');
+  if(chartAlumnoMes){chartAlumnoMes.destroy();chartAlumnoMes=null;}
+  if(!alumnoId){cont.innerHTML='<p style="color:var(--texto2);font-size:.82rem;padding:8px;">Selecciona un alumno para ver su reporte mensual.</p>';return;}
+  const cicloId=$('sel-ciclo-rep').value;
+  const alumno=DB.alumnos.find(a=>a.id===alumnoId);
+  if(!alumno)return;
+  const meses=getStatsPorMesAlumno(alumnoId,cicloId).filter(m=>m.total>0||true);
+  const mesesConDatos=meses.filter(m=>m.total>0);
+
+  // Chart
+  chartAlumnoMes=new Chart(ctx,{type:'bar',data:{
+    labels:meses.map(m=>m.label),
+    datasets:[
+      {label:'✅ Asistencias',data:meses.map(m=>m.asistencia),backgroundColor:'rgba(29,138,60,.75)',borderRadius:4},
+      {label:'⏰ Retardos',data:meses.map(m=>m.retardo),backgroundColor:'rgba(240,165,0,.75)',borderRadius:4},
+      {label:'❌ Faltas',data:meses.map(m=>m.inasistencia),backgroundColor:'rgba(192,24,30,.75)',borderRadius:4},
+      {label:'📋 Justificadas',data:meses.map(m=>m.justificada),backgroundColor:'rgba(224,104,32,.75)',borderRadius:4},
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'top'},title:{display:true,text:alumno.nombre+' · '+alumno.grado+'° Grado',font:{size:13},color:'#1a3a8c'}},
+    scales:{x:{stacked:false,grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // Totales
+  const totA=meses.reduce((s,m)=>s+m.asistencia,0);
+  const totR=meses.reduce((s,m)=>s+m.retardo,0);
+  const totF=meses.reduce((s,m)=>s+m.inasistencia,0);
+  const totJ=meses.reduce((s,m)=>s+m.justificada,0);
+  const totT=totA+totR+totF+totJ;
+  const pct=totT?Math.round((totA+totR)/totT*100):0;
+
+  // Mes con más faltas
+  const peorMes=meses.reduce((prev,cur)=>(cur.inasistencia+cur.justificada)>(prev.inasistencia+prev.justificada)?cur:prev,meses[0]);
+  const mesBadgeCls=peorMes.inasistencia+peorMes.justificada===0?'badge-verde':'badge-rojo';
+
+  // Resumen cards + tabla
+  cont.innerHTML=`
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding:12px;background:var(--gris);border-radius:var(--radius-sm);">
+      <div class="resumen-dia-item" style="flex:1;min-width:80px;"><div class="resumen-dia-num" style="color:var(--verde);font-family:'Fredoka One',sans-serif;font-size:1.5rem;">${totA}</div><div style="font-size:.62rem;font-weight:700;color:var(--texto2);text-transform:uppercase;">✅ Asistencias</div></div>
+      <div class="resumen-dia-item" style="flex:1;min-width:80px;"><div class="resumen-dia-num" style="color:var(--amarillo);font-family:'Fredoka One',sans-serif;font-size:1.5rem;">${totR}</div><div style="font-size:.62rem;font-weight:700;color:var(--texto2);text-transform:uppercase;">⏰ Retardos</div></div>
+      <div class="resumen-dia-item" style="flex:1;min-width:80px;"><div class="resumen-dia-num" style="color:var(--rojo);font-family:'Fredoka One',sans-serif;font-size:1.5rem;">${totF}</div><div style="font-size:.62rem;font-weight:700;color:var(--texto2);text-transform:uppercase;">❌ Faltas</div></div>
+      <div class="resumen-dia-item" style="flex:1;min-width:80px;"><div class="resumen-dia-num" style="color:var(--naranja);font-family:'Fredoka One',sans-serif;font-size:1.5rem;">${totJ}</div><div style="font-size:.62rem;font-weight:700;color:var(--texto2);text-transform:uppercase;">📋 Justif.</div></div>
+      <div class="resumen-dia-item" style="flex:1;min-width:80px;"><div class="resumen-dia-num" style="color:var(--azul);font-family:'Fredoka One',sans-serif;font-size:1.5rem;">${pct}%</div><div style="font-size:.62rem;font-weight:700;color:var(--texto2);text-transform:uppercase;">% Asistencia</div></div>
+    </div>
+    <div style="margin-bottom:12px;font-size:.8rem;color:var(--texto2);">
+      📍 Mes con más faltas: <span class="badge ${mesBadgeCls}">${peorMes.label} (${peorMes.inasistencia+peorMes.justificada} faltas)</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Mes</th><th>✅ Asistencias</th><th>⏰ Retardos</th><th>❌ Faltas</th><th>📋 Justificadas</th><th>Total días</th><th>% Asistencia</th><th>Indicador</th>
+        </tr></thead>
+        <tbody>
+          ${meses.map(m=>{
+            const t=m.asistencia+m.retardo+m.inasistencia+m.justificada;
+            const p=t?Math.round((m.asistencia+m.retardo)/t*100):null;
+            const faltas=m.inasistencia+m.justificada;
+            let ind='',cls='';
+            if(p===null){ind='—';cls='';}
+            else if(p>=90){ind='🟢 Excelente';cls='badge-verde';}
+            else if(p>=75){ind='🟡 Regular';cls='badge-amarillo';}
+            else{ind='🔴 Riesgo';cls='badge-rojo';}
+            return`<tr style="${faltas>0?'background:#fff8f8;':''}">
+              <td><strong>${m.label}</strong></td>
+              <td><span class="badge badge-verde">${m.asistencia}</span></td>
+              <td><span class="badge badge-amarillo">${m.retardo}</span></td>
+              <td><span class="badge badge-rojo">${m.inasistencia}</span></td>
+              <td><span class="badge badge-naranja">${m.justificada}</span></td>
+              <td>${t||'—'}</td>
+              <td><strong>${p!==null?p+'%':'—'}</strong></td>
+              <td>${cls?`<span class="badge ${cls}">${ind}</span>`:ind}</td>
+            </tr>`;
+          }).join('')}
+          <tr style="background:var(--gris2);font-weight:800;">
+            <td><strong>TOTAL</strong></td>
+            <td><strong>${totA}</strong></td><td><strong>${totR}</strong></td>
+            <td><strong>${totF}</strong></td><td><strong>${totJ}</strong></td>
+            <td><strong>${totT}</strong></td><td><strong>${pct}%</strong></td>
+            <td><span class="badge ${pct>=90?'badge-verde':pct>=75?'badge-amarillo':'badge-rojo'}">${pct>=90?'🟢 Excelente':pct>=75?'🟡 Regular':'🔴 Riesgo'}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function exportarAlumnoPorMesPDF(){
+  const alumnoId=$('sel-alumno-mes').value;
+  if(!alumnoId){showNotif('⚠️ Selecciona un alumno','error');return;}
+  const cicloId=$('sel-ciclo-rep').value;
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  const alumno=DB.alumnos.find(a=>a.id===alumnoId);
+  if(!alumno)return;
+  const meses=getStatsPorMesAlumno(alumnoId,cicloId);
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  doc.setFillColor(26,58,140);doc.rect(0,0,210,38,'F');
+  doc.setFillColor(192,24,30);doc.rect(0,35,210,5,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(14);
+  doc.text('Jardín de Niños Jaime Torres Bodet · 30EJN1426K',14,12);
+  doc.setFontSize(9);doc.text('Mtra. Carla Berenice Vilis Álvarez · Xochitla, Veracruz',14,20);
+  doc.text('Reporte Individual de Asistencia por Mes · Ciclo '+(ciclo?.nombre||''),14,27);
+  doc.text('Generado: '+new Date().toLocaleDateString('es-MX'),14,34);
+  doc.setTextColor(0,0,0);
+  let y=46;
+  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(26,58,140);
+  doc.text('ALUMNO: '+alumno.nombre,14,y);y+=5;
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(80,80,80);
+  doc.text('Grado: '+alumno.grado+'° · Ciclo: '+(ciclo?.nombre||''),14,y);y+=8;
+  const totA=meses.reduce((s,m)=>s+m.asistencia,0);
+  const totR=meses.reduce((s,m)=>s+m.retardo,0);
+  const totF=meses.reduce((s,m)=>s+m.inasistencia,0);
+  const totJ=meses.reduce((s,m)=>s+m.justificada,0);
+  const totT=totA+totR+totF+totJ;
+  const pct=totT?Math.round((totA+totR)/totT*100):0;
+  doc.setTextColor(0,0,0);doc.setFont('helvetica','bold');doc.setFontSize(9);
+  doc.text(`Resumen: Asistencias ${totA} | Retardos ${totR} | Faltas ${totF} | Justificadas ${totJ} | % Asistencia ${pct}%`,14,y);y+=8;
+  doc.autoTable({startY:y,
+    head:[['Mes','Asistencias','Retardos','Faltas','Justificadas','Total días','% Asistencia','Indicador']],
+    body:meses.map(m=>{
+      const t=m.asistencia+m.retardo+m.inasistencia+m.justificada;
+      const p=t?Math.round((m.asistencia+m.retardo)/t*100):null;
+      const ind=p===null?'—':p>=90?'Excelente':p>=75?'Regular':'Riesgo';
+      return[m.label,m.asistencia,m.retardo,m.inasistencia,m.justificada,t||0,p!==null?p+'%':'—',ind];
+    }),
+    foot:[['TOTAL',totA,totR,totF,totJ,totT,pct+'%',pct>=90?'Excelente':pct>=75?'Regular':'Riesgo']],
+    styles:{fontSize:8},headStyles:{fillColor:[26,58,140]},footStyles:{fillColor:[220,228,248],fontStyle:'bold'},
+    alternateRowStyles:{fillColor:[245,248,255]}
+  });
+  doc.save('Reporte_'+alumno.nombre.replace(/\s+/g,'_')+'_'+ciclo?.nombre+'.pdf');
+  showNotif('📥 PDF descargado','success');
+}
+
+function exportarReportePDF(){
+  const cicloId=$('sel-ciclo-rep').value;
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  const gradoFiltro=$('sel-grado-rep').value;
+  const alumnos=getAlumnosFiltrados().sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  
+  // Header
+  doc.setFillColor(26,58,140);doc.rect(0,0,210,38,'F');
+  doc.setFillColor(192,24,30);doc.rect(0,35,210,5,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(15);
+  doc.text('Jardín de Niños Jaime Torres Bodet',14,12);
+  doc.setFontSize(9);doc.text('Clave: 30EJN1426K · Xochitla, Veracruz · Proceso Unitario',14,20);
+  doc.text('Mtra. Carla Berenice Vilis Álvarez',14,27);
+  doc.setFontSize(8);doc.text('Reporte de Asistencia · Ciclo '+(ciclo?.nombre||'')+(gradoFiltro?' · '+gradoFiltro+'° Grado':''),14,33);
+  doc.setTextColor(0,0,0);
+  
+  // Reporte PMC
+  let y=48;
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(26,58,140);
+  doc.text('REPORTE DE ASISTENCIA - PROCESO DE MEJORA CONTINUA (PMC)',14,y);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,100,100);
+  y+=5;doc.text('Nueva Escuela Mexicana (NEM) · Generado: '+new Date().toLocaleDateString('es-MX'),14,y);
+  y+=8;
+  
+  const stats=alumnos.map(a=>({a,s:getAsistenciaStats(a.id,cicloId)}));
+  let ta=0,tf=0,tr=0,tTotal=0;
+  stats.forEach(x=>{ta+=x.s.asistencia;tf+=x.s.inasistencia+x.s.justificada;tr+=x.s.retardo;tTotal+=x.s.total;});
+  
+  doc.setFontSize(10);doc.setTextColor(0,0,0);
+  doc.setFont('helvetica','bold');doc.text('RESUMEN GENERAL DEL CICLO:',14,y);y+=6;
+  doc.setFont('helvetica','normal');doc.setFontSize(9);
+  doc.text('• Total de registros: '+tTotal+'  |  Asistencias: '+ta+'  |  Faltas: '+tf+'  |  Retardos: '+tr,14,y);y+=5;
+  doc.text('• Porcentaje de asistencia: '+(tTotal?Math.round((ta+tr)/tTotal*100):0)+'%  |  Total alumnos: '+alumnos.length,14,y);y+=8;
+  
+  doc.autoTable({startY:y,
+    head:[['N°','Nombre del Alumno','Grado','Asistencias','Retardos','Faltas','Justif.','% Asistencia']],
+    body:stats.map((x,i)=>{
+      const pct=x.s.total?Math.round((x.s.asistencia+x.s.retardo)/x.s.total*100):0;
+      return[i+1,x.a.nombre,x.a.grado+'°',x.s.asistencia,x.s.retardo,x.s.inasistencia,x.s.justificada,pct+'%'];
+    }),
+    styles:{fontSize:8,font:'helvetica'},headStyles:{fillColor:[26,58,140],fontSize:8},
+    alternateRowStyles:{fillColor:[240,244,252]},
+    columnStyles:{7:{halign:'center'}}
+  });
+  
+  doc.save('Reporte_PMC_JTB_'+(ciclo?.nombre||'')+'.pdf');
+  showNotif('📥 Reporte PDF descargado','success');
+}
+
+// ==================== NFC / QR ====================
+let filtroGradoNFC='todos';
+let qrInstances={};
+let scannerStream=null;
+
+function loadNFCSection(){
+  fillCicloSelects();
+  renderQRGrid();
+}
+
+function filtrarGradoNFC(g){
+  filtroGradoNFC=g;
+  document.querySelectorAll('#section-nfc .grado-tab').forEach(b=>{
+    b.className='grado-tab';
+    if((g==='todos'&&b.textContent.includes('Todos'))||(g!=='todos'&&b.textContent.includes(g+'°')))b.className='grado-tab active-'+(g==='todos'?'all':g);
+  });
+  renderQRGrid();
+}
+
+function renderQRGrid(){
+  const cicloId=$('sel-ciclo-nfc').value;
+  const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId&&(filtroGradoNFC==='todos'||a.grado===filtroGradoNFC))
+    .sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
+  const grid=$('qr-grid');
+  if(!alumnos.length){grid.innerHTML='<p style="color:var(--texto2);font-size:.85rem;padding:20px;text-align:center;">No hay alumnos en este ciclo.</p>';return;}
+  // Clear old QR instances
+  qrInstances={};
+  grid.innerHTML=alumnos.map(a=>`
+    <div class="qr-card g${a.grado}">
+      <div class="qr-grado">${a.grado}° Grado</div>
+      <div class="qr-container" id="qr-${a.id}"></div>
+      <div class="qr-nombre">${a.nombre}</div>
+      <button class="btn btn-outline btn-xs" style="margin-top:6px;" onclick="descargarQR('${a.id}','${a.nombre}')">⬇️ Descargar</button>
+    </div>`).join('');
+  // Generate QR codes
+  alumnos.forEach(a=>{
+    const url=`https://cbva1902.github.io/asistencia-jtb/?nfc=${a.nfcId||a.id}`;
+    try{
+      qrInstances[a.id]=new QRCode(document.getElementById('qr-'+a.id),{
+        text:url,width:110,height:110,
+        colorDark:'#1a3a8c',colorLight:'#ffffff',
+        correctLevel:QRCode.CorrectLevel.M
+      });
+    }catch(e){document.getElementById('qr-'+a.id).innerHTML='<div style="padding:10px;font-size:.65rem;color:gray;">QR no disponible</div>';}
+  });
+}
+
+function descargarQR(alumnoId,nombre){
+  const container=document.getElementById('qr-'+alumnoId);
+  const img=container.querySelector('img')||container.querySelector('canvas');
+  if(!img){showNotif('Error al obtener QR','error');return;}
+  const canvas=document.createElement('canvas');
+  const ctx=canvas.getContext('2d');
+  canvas.width=200;canvas.height=240;
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,200,240);
+  ctx.fillStyle='#1a3a8c';ctx.fillRect(0,0,200,30);
+  ctx.fillStyle='white';ctx.font='bold 9px Arial';ctx.textAlign='center';
+  ctx.fillText('Jardín de Niños Jaime Torres Bodet',100,12);
+  ctx.fillText('30EJN1426K · Xochitla, Ver.',100,24);
+  if(img.tagName==='CANVAS'){ctx.drawImage(img,45,35,110,110);}
+  else{const i2=new Image();i2.src=img.src;i2.onload=()=>{ctx.drawImage(i2,45,35,110,110);};} 
+  ctx.fillStyle='#1a3a8c';ctx.font='bold 10px Arial';ctx.textAlign='center';
+  ctx.fillText(nombre.split(' ').slice(0,3).join(' '),100,165);
+  ctx.font='8px Arial';ctx.fillStyle='#888';ctx.fillText('Escanear para registrar asistencia',100,180);
+  const link=document.createElement('a');
+  link.download='QR_'+nombre.replace(/\s+/g,'_')+'.png';
+  link.href=canvas.toDataURL();link.click();
+}
+
+function imprimirTodosQR(){window.print();}
+
+function abrirScanner(){
+  const sec=$('scanner-section');sec.style.display='block';
+  $('scanner-result').textContent='';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(stream=>{
+    scannerStream=stream;
+    $('scanner-video').srcObject=stream;
+    startQRScan();
+  }).catch(()=>{showNotif('⚠️ No se pudo acceder a la cámara','error');sec.style.display='none';});
+}
+
+function cerrarScanner(){
+  if(scannerStream)scannerStream.getTracks().forEach(t=>t.stop());
+  $('scanner-section').style.display='none';
+}
+
+function startQRScan(){
+  // Basic QR scanning using canvas
+  const video=$('scanner-video');
+  const canvas=document.createElement('canvas');
+  const ctx2=canvas.getContext('2d');
+  function scan(){
+    if(!scannerStream)return;
+    if(video.readyState===video.HAVE_ENOUGH_DATA){
+      canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+      ctx2.drawImage(video,0,0);
+      // Note: full QR decode would need jsQR library
+      // For now show instruction
+      $('scanner-result').innerHTML='<span style="color:orange;font-size:.78rem;">📷 Apunta la cámara al código QR del alumno.<br>Para máxima funcionalidad, usa una app NFC Writer para escribir el código en etiquetas NFC.</span>';
+    }
+    setTimeout(scan,500);
+  }
+  video.addEventListener('loadedmetadata',scan);
+}
+
+// NFC URL handler - check if opened via NFC/QR
+function checkNFCParam(){
+  const params=new URLSearchParams(window.location.search);
+  const nfcId=params.get('nfc');
+  if(nfcId){
+    // Show NFC landing screen instead of normal app
+    showNFCLanding(nfcId);
+  }
+}
+
+function showNFCLanding(nfcId){
+  const alumno=DB.alumnos.find(a=>a.nfcId===nfcId||a.id===nfcId);
+  const hoy=fechaHoy();
+  const overlay=document.createElement('div');
+  overlay.id='nfc-landing';
+  overlay.style.cssText='position:fixed;inset:0;background:linear-gradient(135deg,#1a3a8c,#1e4fc2);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;font-family:Nunito,sans-serif;padding:24px;text-align:center;';
+  if(!alumno){
+    overlay.innerHTML=`<div style="font-size:3rem;">⚠️</div><h2 style="font-family:Fredoka One,sans-serif;font-size:1.5rem;margin:12px 0;">Alumno no encontrado</h2><p style="opacity:.8;font-size:.9rem;">El código NFC no corresponde a ningún alumno registrado.</p><button onclick="document.getElementById('nfc-landing').remove();" style="margin-top:20px;padding:12px 24px;border-radius:12px;border:2px solid white;background:transparent;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Abrir App</button>`;
+    document.body.appendChild(overlay);return;
+  }
+  const k=alumno.id+'_'+hoy;
+  const yaRegistrado=DB.asistencia[k];
+  const horaActual=new Date().toTimeString().slice(0,5);
+  const horaRetardo=DB.config.horaRetardo||'08:30';
+  const esRetardo=horaActual>horaRetardo;
+  if(!yaRegistrado){
+    DB.asistencia[k]={estado:esRetardo?'retardo':'asistencia',hora:horaActual,justificacion:'',nota:'NFC'};
+    saveDB(DB);
+  }
+  const rec=DB.asistencia[k];
+  const estadoInfo={asistencia:{icon:'✅',label:'ASISTENCIA PUNTUAL',color:'#1d8a3c',bg:'#d4f5e2'},retardo:{icon:'⏰',label:'RETARDO',color:'#8a6100',bg:'#fff3cd'},inasistencia:{icon:'❌',label:'FALTA',color:'#c0181e',bg:'#fde8e8'},inasistencia_justificada:{icon:'📋',label:'JUSTIFICADA',color:'#e06820',bg:'#ffe5d4'}};
+  const ei=estadoInfo[rec.estado]||estadoInfo.asistencia;
+  const initials=alumno.nombre.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+  overlay.innerHTML=`
+    <div style="background:rgba(255,255,255,.15);border-radius:20px;padding:28px 32px;max-width:360px;width:100%;">
+      <div style="font-size:2.5rem;margin-bottom:8px;">🏫</div>
+      <div style="font-family:Fredoka One,sans-serif;font-size:1rem;margin-bottom:16px;opacity:.85;">Jardín de Niños Jaime Torres Bodet</div>
+      <div style="width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-family:Fredoka One,sans-serif;font-size:1.6rem;margin:0 auto 12px;">${initials}</div>
+      <h2 style="font-family:Fredoka One,sans-serif;font-size:1.3rem;margin:0 0 4px;">${alumno.nombre}</h2>
+      <div style="opacity:.8;font-size:.82rem;margin-bottom:20px;">${alumno.grado}° Grado · ${hoy.split('-').reverse().join('/')}</div>
+      <div style="background:${ei.bg};border-radius:14px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:2.5rem;">${ei.icon}</div>
+        <div style="color:${ei.color};font-family:Fredoka One,sans-serif;font-size:1.2rem;">${ei.label}</div>
+        <div style="color:${ei.color};font-size:.85rem;margin-top:4px;">${rec.hora?'Hora: '+rec.hora:''}</div>
+        ${yaRegistrado?'<div style="font-size:.72rem;color:#666;margin-top:6px;">⚠️ Ya tenía registro previo del día</div>':''}
+      </div>
+      <div style="font-size:.75rem;opacity:.7;">📅 ${fmtFecha(hoy)}</div>
+      <button onclick="document.getElementById('nfc-landing').remove();history.replaceState(null,'',location.pathname);" style="margin-top:16px;padding:11px 24px;border-radius:12px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:white;font-size:.9rem;font-weight:700;cursor:pointer;width:100%;">Abrir App completa →</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function handleNFCScan(nfcIdOrData){
+  // Extract nfcId from URL or raw value
+  let nfcId=nfcIdOrData;
+  try{
+    const u=new URL(nfcIdOrData);
+    nfcId=u.searchParams.get('nfc')||nfcIdOrData;
+  }catch(e){}
+  if(nfcId.includes('|')){nfcId=nfcId.split('/').pop().split('|')[0];}
+  const alumno=DB.alumnos.find(a=>a.nfcId===nfcId||a.id===nfcId);
+  if(alumno){
+    const hoy=fechaHoy();
+    const k=alumno.id+'_'+hoy;
+    const horaActual=new Date().toTimeString().slice(0,5);
+    const horaRetardo=DB.config.horaRetardo||'08:30';
+    const esRetardo=horaActual>horaRetardo;
+    if(!DB.asistencia[k]){
+      DB.asistencia[k]={estado:esRetardo?'retardo':'asistencia',hora:horaActual,justificacion:'',nota:'NFC'};
+      saveDB(DB);
+      showNotif('✅ '+(esRetardo?'⏰ Retardo':'Asistencia')+': '+alumno.nombre,'success');
+    }else{showNotif('ℹ️ Ya tiene registro hoy: '+alumno.nombre);}
+    if($('scanner-result'))$('scanner-result').innerHTML=`<div style="padding:12px;"><span style="color:var(--verde);font-weight:700;font-size:.9rem;">✅ ${alumno.nombre}</span><br><span style="font-size:.75rem;color:var(--texto2);">${esRetardo?'⏰ Retardo':'Puntual'} · ${horaActual}</span></div>`;
+    renderAsistenciaLista();renderResumenDia();
+  }else{showNotif('⚠️ Alumno no encontrado','error');}
+}
+
+// ==================== INIT ====================
+function init(){
+  updateHeader();
+  fillCicloSelects();
+  renderDashboard();
+  checkNFCParam();
+  // Update header time
+  setInterval(updateHeader,60000);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay=>{
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open');});
+});
+
+// Keyboard escape
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
+
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
