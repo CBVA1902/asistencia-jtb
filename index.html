@@ -37,6 +37,7 @@ function pdfHeader(doc,titulo,subtitulo){
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -2688,38 +2689,113 @@ function verURLNFC(nfcId,nombre){
 
 function imprimirTodosQR(){window.print();}
 
+let scannerAnimFrame=null;
+
 function abrirScanner(){
   const sec=$('scanner-section');sec.style.display='block';
-  $('scanner-result').textContent='';
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(stream=>{
+  $('scanner-result').innerHTML='<span style="color:orange;font-size:.78rem;">📷 Apunta la cámara al código QR del alumno...</span>';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}})
+  .then(stream=>{
     scannerStream=stream;
-    $('scanner-video').srcObject=stream;
-    startQRScan();
-  }).catch(()=>{showNotif('⚠️ No se pudo acceder a la cámara','error');sec.style.display='none';});
+    const video=$('scanner-video');
+    video.srcObject=stream;
+    video.setAttribute('playsinline',true);
+    video.play();
+    video.addEventListener('loadedmetadata',()=>{
+      startQRScan();
+    });
+  })
+  .catch(err=>{
+    showNotif('⚠️ No se pudo acceder a la cámara: '+err.message,'error');
+    sec.style.display='none';
+  });
 }
 
 function cerrarScanner(){
+  if(scannerAnimFrame){cancelAnimationFrame(scannerAnimFrame);scannerAnimFrame=null;}
   if(scannerStream)scannerStream.getTracks().forEach(t=>t.stop());
+  scannerStream=null;
   $('scanner-section').style.display='none';
+  $('scanner-result').innerHTML='';
 }
 
+let ultimoQRLeido=null;
+let ultimoQRTiempo=0;
+
 function startQRScan(){
-  // Basic QR scanning using canvas
   const video=$('scanner-video');
   const canvas=document.createElement('canvas');
-  const ctx2=canvas.getContext('2d');
-  function scan(){
-    if(!scannerStream)return;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+
+  function tick(){
+    if(!scannerStream){return;}
     if(video.readyState===video.HAVE_ENOUGH_DATA){
-      canvas.width=video.videoWidth;canvas.height=video.videoHeight;
-      ctx2.drawImage(video,0,0);
-      // Note: full QR decode would need jsQR library
-      // For now show instruction
-      $('scanner-result').innerHTML='<span style="color:orange;font-size:.78rem;">📷 Apunta la cámara al código QR del alumno.<br>Para máxima funcionalidad, usa una app NFC Writer para escribir el código en etiquetas NFC.</span>';
+      canvas.height=video.videoHeight;
+      canvas.width=video.videoWidth;
+      ctx.drawImage(video,0,0,canvas.width,canvas.height);
+      const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+
+      // Use jsQR to decode
+      if(window.jsQR){
+        const code=jsQR(imageData.data,imageData.width,imageData.height,{inversionAttempts:'dontInvert'});
+        if(code&&code.data){
+          const ahora=Date.now();
+          // Evitar lecturas duplicadas en 3 segundos
+          if(code.data!==ultimoQRLeido||(ahora-ultimoQRTiempo)>3000){
+            ultimoQRLeido=code.data;
+            ultimoQRTiempo=ahora;
+            procesarQRLeido(code.data);
+          }
+        }
+      }
     }
-    setTimeout(scan,500);
+    scannerAnimFrame=requestAnimationFrame(tick);
   }
-  video.addEventListener('loadedmetadata',scan);
+  scannerAnimFrame=requestAnimationFrame(tick);
+}
+
+function procesarQRLeido(data){
+  // Extract nfc ID from URL
+  let nfcId=data;
+  try{
+    const url=new URL(data);
+    const param=url.searchParams.get('nfc');
+    if(param)nfcId=param;
+  }catch(e){}
+
+  const hoy=fechaHoy();
+  const alumno=DB.alumnos.find(a=>a.nfcId===nfcId||a.id===nfcId);
+
+  if(alumno){
+    const k=alumno.id+'_'+hoy;
+    const horaActual=new Date().toTimeString().slice(0,5);
+    const horaRetardo=(DB.config&&DB.config.horaRetardo)||'08:30';
+    const esRetardo=horaActual>horaRetardo;
+    const yaRegistrado=!!(DB.asistencia&&DB.asistencia[k]);
+
+    if(!yaRegistrado){
+      if(!DB.asistencia)DB.asistencia={};
+      DB.asistencia[k]={estado:esRetardo?'retardo':'asistencia',hora:horaActual,justificacion:'',nota:'QR'};
+      localStorage.setItem(DB_KEY,JSON.stringify(DB));
+      syncFirebase(DB);
+    }
+
+    const estado=yaRegistrado?'Ya registrado hoy':(esRetardo?'⏰ Retardo':'✅ Puntual');
+    const color=yaRegistrado?'var(--amarillo)':esRetardo?'var(--naranja)':'var(--verde)';
+    $('scanner-result').innerHTML=`
+      <div style="padding:12px;background:white;border-radius:10px;margin:8px;border-left:4px solid ${color};">
+        <div style="font-weight:800;font-size:.95rem;color:var(--texto);">${alumno.nombre}</div>
+        <div style="font-size:.78rem;color:${color};font-weight:700;">${estado} · ${horaActual}</div>
+        <div style="font-size:.7rem;color:var(--texto2);">${alumno.grado}° Grado</div>
+      </div>`;
+    showNotif((yaRegistrado?'ℹ️':'✅')+' '+alumno.nombre+' · '+estado, yaRegistrado?'':'success');
+  }else{
+    $('scanner-result').innerHTML=`
+      <div style="padding:10px;background:#fff3cd;border-radius:10px;margin:8px;">
+        <div style="font-size:.8rem;font-weight:700;color:#8a6100;">⚠️ QR no reconocido</div>
+        <div style="font-size:.68rem;color:#666;word-break:break-all;">${data.substring(0,60)}...</div>
+      </div>`;
+  }
 }
 
 // NFC URL handler - check if opened via NFC/QR
