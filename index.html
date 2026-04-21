@@ -36,6 +36,7 @@ function pdfHeader(doc,titulo,subtitulo){
 }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -2444,54 +2445,146 @@ function filtrarGradoNFC(g){
   renderQRGrid();
 }
 
+function generarCanvasQR(url,size){
+  // Use QRious if available (canvas-based, more reliable), else fallback to QRCode
+  if(window.QRious){
+    const canvas=document.createElement('canvas');
+    new QRious({element:canvas,value:url,size:size||140,foreground:'#1a3a8c',background:'#ffffff',level:'M'});
+    return canvas;
+  }
+  return null;
+}
+
 function renderQRGrid(){
   const cicloId=$('sel-ciclo-nfc').value;
   const alumnos=DB.alumnos.filter(a=>a.cicloId===cicloId&&(filtroGradoNFC==='todos'||a.grado===filtroGradoNFC))
     .sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
   const grid=$('qr-grid');
   if(!alumnos.length){grid.innerHTML='<p style="color:var(--texto2);font-size:.85rem;padding:20px;text-align:center;">No hay alumnos en este ciclo.</p>';return;}
-  // Clear old QR instances
   qrInstances={};
   grid.innerHTML=alumnos.map(a=>`
     <div class="qr-card g${a.grado}">
       <div class="qr-grado">${a.grado}° Grado</div>
-      <div class="qr-container" id="qr-${a.id}"></div>
+      <div class="qr-container" id="qr-${a.id}" style="display:flex;align-items:center;justify-content:center;"></div>
       <div class="qr-nombre">${a.nombre}</div>
-      <button class="btn btn-outline btn-xs" style="margin-top:6px;" onclick="descargarQR('${a.id}','${a.nombre}')">⬇️ Descargar</button>
+      <button class="btn btn-outline btn-xs" style="margin-top:6px;width:100%;justify-content:center;" onclick="descargarQR('${a.id}','${a.nombre}')">⬇️ Descargar</button>
+      <button class="btn btn-xs" style="margin-top:4px;width:100%;justify-content:center;background:#e8edf8;color:#1a3a8c;border:1px solid #c5cfe8;border-radius:6px;cursor:pointer;padding:5px;font-size:.7rem;font-weight:700;" onclick="verURLNFC('${a.nfcId||a.id}','${a.nombre}')">🔗 Ver URL NFC</button>
     </div>`).join('');
-  // Generate QR codes
+  // Generate QR codes using canvas
   alumnos.forEach(a=>{
     const url=`https://cbva1902.github.io/asistencia-jtb/?nfc=${a.nfcId||a.id}`;
+    const cont=document.getElementById('qr-'+a.id);
     try{
-      qrInstances[a.id]=new QRCode(document.getElementById('qr-'+a.id),{
-        text:url,width:110,height:110,
-        colorDark:'#1a3a8c',colorLight:'#ffffff',
-        correctLevel:QRCode.CorrectLevel.M
-      });
-    }catch(e){document.getElementById('qr-'+a.id).innerHTML='<div style="padding:10px;font-size:.65rem;color:gray;">QR no disponible</div>';}
+      const qrCanvas=generarCanvasQR(url,120);
+      if(qrCanvas){
+        qrCanvas.style.borderRadius='8px';
+        cont.appendChild(qrCanvas);
+        qrInstances[a.id]=qrCanvas;
+      }else{
+        // Fallback to QRCode lib
+        const qr=new QRCode(cont,{text:url,width:120,height:120,colorDark:'#1a3a8c',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+        setTimeout(()=>{
+          const c=cont.querySelector('canvas');
+          if(c)qrInstances[a.id]=c;
+        },300);
+      }
+    }catch(e){cont.innerHTML='<div style="padding:10px;font-size:.65rem;color:gray;text-align:center;">QR no disponible</div>';}
   });
 }
 
 function descargarQR(alumnoId,nombre){
-  const container=document.getElementById('qr-'+alumnoId);
-  const img=container.querySelector('img')||container.querySelector('canvas');
-  if(!img){showNotif('Error al obtener QR','error');return;}
-  const canvas=document.createElement('canvas');
-  const ctx=canvas.getContext('2d');
-  canvas.width=200;canvas.height=240;
-  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,200,240);
-  ctx.fillStyle='#1a3a8c';ctx.fillRect(0,0,200,30);
-  ctx.fillStyle='white';ctx.font='bold 9px Arial';ctx.textAlign='center';
-  ctx.fillText('Jardín de Niños Jaime Torres Bodet',100,12);
-  ctx.fillText('30EJN1426K · Xochitla, Ver.',100,24);
-  if(img.tagName==='CANVAS'){ctx.drawImage(img,45,35,110,110);}
-  else{const i2=new Image();i2.src=img.src;i2.onload=()=>{ctx.drawImage(i2,45,35,110,110);};} 
-  ctx.fillStyle='#1a3a8c';ctx.font='bold 10px Arial';ctx.textAlign='center';
-  ctx.fillText(nombre.split(' ').slice(0,3).join(' '),100,165);
-  ctx.font='8px Arial';ctx.fillStyle='#888';ctx.fillText('Escanear para registrar asistencia',100,180);
-  const link=document.createElement('a');
-  link.download='QR_'+nombre.replace(/\s+/g,'_')+'.png';
-  link.href=canvas.toDataURL();link.click();
+  const cicloId=$('sel-ciclo-nfc').value;
+  const alumno=DB.alumnos.find(a=>a.id===alumnoId);
+  const grado=alumno?alumno.grado:'';
+  const url=`https://cbva1902.github.io/asistencia-jtb/?nfc=${alumno?(alumno.nfcId||alumno.id):''}`;
+  
+  // Generate QR canvas fresh for download
+  const qrCanvas=generarCanvasQR(url,160);
+  
+  function dibujarTarjeta(qrC){
+    const W=220,H=290;
+    const canvas=document.createElement('canvas');
+    canvas.width=W;canvas.height=H;
+    const ctx=canvas.getContext('2d');
+    // Background
+    ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+    // Header bar
+    ctx.fillStyle='#1a3a8c';ctx.fillRect(0,0,W,48);
+    // Header text
+    ctx.fillStyle='white';ctx.textAlign='center';
+    ctx.font='bold 11px Arial';ctx.fillText('Jardín de Niños Jaime Torres Bodet',W/2,17);
+    ctx.font='9px Arial';ctx.fillText('30EJN1426K · Xochitla, Ver.',W/2,31);
+    ctx.font='bold 8px Arial';
+    const gradoColor=grado==='1'?'#4cff8f':grado==='2'?'#88aaff':'#ff8888';
+    ctx.fillStyle=gradoColor;ctx.fillText(grado+'° Grado',W/2,44);
+    // Border
+    ctx.strokeStyle='#1a3a8c';ctx.lineWidth=2;ctx.strokeRect(1,1,W-2,H-2);
+    // QR code centered
+    if(qrC){
+      const qrSize=160;const qrX=(W-qrSize)/2;const qrY=58;
+      // White background for QR
+      ctx.fillStyle='white';ctx.fillRect(qrX-4,qrY-4,qrSize+8,qrSize+8);
+      ctx.drawImage(qrC,qrX,qrY,qrSize,qrSize);
+    }
+    // Name
+    ctx.fillStyle='#1a3a8c';ctx.font='bold 11px Arial';ctx.textAlign='center';
+    const nombreCorto=nombre.split(' ').slice(0,4).join(' ');
+    // Word wrap name
+    const words=nombreCorto.split(' ');
+    let line='',y=235;
+    words.forEach(w=>{
+      const test=line?line+' '+w:w;
+      if(ctx.measureText(test).width>W-20&&line){ctx.fillText(line,W/2,y);line=w;y+=14;}
+      else line=test;
+    });
+    if(line)ctx.fillText(line,W/2,y);
+    // Footer
+    ctx.font='8px Arial';ctx.fillStyle='#888';ctx.fillText('Escanear para registrar asistencia',W/2,H-8);
+    // Download
+    const link=document.createElement('a');
+    link.download='QR_'+nombre.replace(/\s+/g,'_')+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    showNotif('✅ QR descargado: '+nombre.split(' ')[0],'success');
+  }
+  
+  if(qrCanvas){
+    dibujarTarjeta(qrCanvas);
+  }else{
+    // Fallback: use existing rendered QR
+    const cont=document.getElementById('qr-'+alumnoId);
+    const existingCanvas=cont?cont.querySelector('canvas'):null;
+    if(existingCanvas){
+      dibujarTarjeta(existingCanvas);
+    }else{
+      showNotif('⚠️ Espera a que cargue el QR','error');
+    }
+  }
+}
+
+function verURLNFC(nfcId,nombre){
+  const url='https://cbva1902.github.io/asistencia-jtb/?nfc='+nfcId;
+  // Create a nice popup
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  div.innerHTML=`
+    <div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+      <div style="font-family:'Fredoka One',sans-serif;font-size:1.1rem;color:#1a3a8c;margin-bottom:4px;">🔗 URL NFC</div>
+      <div style="font-size:.85rem;color:#4a5580;margin-bottom:14px;font-weight:700;">${nombre}</div>
+      <div style="background:#f0f4fc;border-radius:10px;padding:12px;margin-bottom:14px;word-break:break-all;font-size:.78rem;font-family:monospace;color:#1a2340;border:1px solid #c5cfe8;">${url}</div>
+      <div style="font-size:.75rem;color:#4a5580;margin-bottom:14px;background:#fff3cd;padding:10px;border-radius:8px;">
+        📋 <strong>Cómo usar en GoToTags:</strong><br>
+        NFC Tag Tools → Write → Add Record → URI/URL → pega esta URL → Write Tag
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="navigator.clipboard.writeText('${url}').then(()=>{this.textContent='✅ Copiado!';setTimeout(()=>{this.textContent='📋 Copiar URL'},1500);})" 
+          style="flex:1;padding:10px;background:#1a3a8c;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:.85rem;">📋 Copiar URL</button>
+        <button onclick="this.closest('div[style*=fixed]').remove()" 
+          style="padding:10px 16px;background:#e8edf8;color:#1a3a8c;border:none;border-radius:10px;font-weight:700;cursor:pointer;">Cerrar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(div);
+  div.addEventListener('click',e=>{if(e.target===div)div.remove();});
 }
 
 function imprimirTodosQR(){window.print();}
