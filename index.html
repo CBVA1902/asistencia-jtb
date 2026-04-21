@@ -1135,23 +1135,30 @@ function inicializarFirebase(config){
     fbRef.once('value').then(snap=>{
       const remoto=snap.val();
       if(remoto&&remoto.ciclos){
-        // Hay datos remotos - preguntar si fusionar
+        // Automaticamente elegir el que tiene MAS datos - sin preguntar
+        const localAlumnos=(DB.alumnos||[]).length;
+        const remotoAlumnos=(remoto.alumnos||[]).length;
+        const localAsist=Object.keys(DB.asistencia||{}).length;
+        const remotoAsist=Object.keys(remoto.asistencia||{}).length;
         const localTieneDatos=DB.ciclos&&DB.ciclos.length>0;
-        if(localTieneDatos&&confirm('¿Cargar los datos guardados en la nube? (Reemplazará los datos locales)')){
+
+        if(!localTieneDatos){
+          // Local vacío - usar remoto
           DB=remoto;
           localStorage.setItem(DB_KEY,JSON.stringify(DB));
           actualizarTodasLasVistas();
-        }else if(!localTieneDatos){
+        }else if(remotoAlumnos>localAlumnos||(remotoAlumnos===localAlumnos&&remotoAsist>localAsist)){
+          // Remoto tiene MAS datos - usar remoto
           DB=remoto;
           localStorage.setItem(DB_KEY,JSON.stringify(DB));
           actualizarTodasLasVistas();
         }else{
-          // Subir datos locales a la nube
-          fbRef.set(DB);
+          // Local tiene MAS o IGUAL datos - subir local a nube
+          fbRef.set(JSON.parse(JSON.stringify(DB)));
         }
       }else{
-        // No hay datos remotos, subir locales
-        fbRef.set(DB);
+        // No hay datos remotos - subir locales
+        fbRef.set(JSON.parse(JSON.stringify(DB)));
       }
       // Activar escucha en tiempo real
       activarEscuchaFirebase();
