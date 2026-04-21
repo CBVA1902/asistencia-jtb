@@ -600,7 +600,9 @@ tbody td{padding:9px 12px;vertical-align:middle;}
     <label>📅 Ciclo:</label>
     <select class="form-control" id="sel-ciclo-asist" onchange="loadAsistenciaSection()" style="min-width:160px;"></select>
     <label>📆 Fecha:</label>
+    <button class="btn btn-outline btn-sm" onclick="cambiarDia(-1)" title="Día anterior">◀</button>
     <input type="date" class="form-control" id="fecha-asist" onchange="loadAsistenciaFecha()" style="min-width:160px;">
+    <button class="btn btn-outline btn-sm" onclick="cambiarDia(1)" title="Día siguiente">▶</button>
     <button class="btn btn-outline btn-sm" onclick="marcarHoy()">Hoy</button>
   </div>
 
@@ -1748,11 +1750,32 @@ let estadoSeleccionado=null;
 
 function loadAsistenciaSection(){
   fillCicloSelects();
-  if(!$('fecha-asist').value)$('fecha-asist').value=fechaHoy();
+  // Set date range based on ciclo
+  const cicloId=$('sel-ciclo-asist').value;
+  const ciclo=DB.ciclos.find(c=>c.id===cicloId);
+  const input=$('fecha-asist');
+  if(ciclo){
+    input.min=ciclo.inicio;
+    input.max=ciclo.fin;
+  }else{
+    input.min='';
+    input.max='';
+  }
+  if(!input.value)input.value=fechaHoy();
   loadAsistenciaFecha();
 }
 
 function marcarHoy(){$('fecha-asist').value=fechaHoy();loadAsistenciaFecha();}
+
+function cambiarDia(delta){
+  const input=$('fecha-asist');
+  const fecha=input.value||fechaHoy();
+  const d=new Date(fecha+'T12:00:00');
+  d.setDate(d.getDate()+delta);
+  const nueva=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  input.value=nueva;
+  loadAsistenciaFecha();
+}
 
 function filtrarGradoAsist(g){
   filtroGradoAsist=g;
