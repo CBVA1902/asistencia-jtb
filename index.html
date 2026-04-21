@@ -1359,16 +1359,16 @@ function getDiasSpecialesSEP(ciclo){
         {fecha:'2025-12-31',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
         {fecha:'2026-01-01',tipo:'VACACIONES',desc:'Año Nuevo'},
         {fecha:'2026-01-02',tipo:'VACACIONES',desc:'Vacaciones de Invierno'},
+        {fecha:'2026-03-30',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2026-03-31',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2026-04-01',tipo:'VACACIONES',desc:'Vacaciones de Primavera (Miercoles Santo)'},
+        {fecha:'2026-04-02',tipo:'VACACIONES',desc:'Vacaciones de Primavera (Jueves Santo)'},
+        {fecha:'2026-04-03',tipo:'VACACIONES',desc:'Vacaciones de Primavera (Viernes Santo)'},
         {fecha:'2026-04-06',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
         {fecha:'2026-04-07',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
         {fecha:'2026-04-08',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
-        {fecha:'2026-04-09',tipo:'VACACIONES',desc:'Vacaciones de Primavera (Jueves Santo)'},
-        {fecha:'2026-04-10',tipo:'VACACIONES',desc:'Vacaciones de Primavera (Viernes Santo)'},
-        {fecha:'2026-04-13',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
-        {fecha:'2026-04-14',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
-        {fecha:'2026-04-15',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
-        {fecha:'2026-04-16',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
-        {fecha:'2026-04-17',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2026-04-09',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
+        {fecha:'2026-04-10',tipo:'VACACIONES',desc:'Vacaciones de Primavera'},
       ]
     }
   };
@@ -1448,7 +1448,7 @@ function renderDashboard(){
     if(diaInfo){
       const badgeMap={CTE:'badge-azul',SUSPENSION:'badge-morado',EVALUACION:'badge-amarillo',VACACIONES:'badge-gris',FESTIVO:'badge-rojo'};
       html+=`<div class="badge ${badgeMap[diaInfo.tipo]||'badge-azul'}" style="margin-bottom:8px;font-size:.75rem;">${diaInfo.tipo}</div><br>`;
-      html+=`<strong>${diaInfo.desc}</strong>`;
+      html+=`<strong>${diaInfo.descripcion||diaInfo.desc||""}</strong>`;
     }else{
       const d=new Date(hoy+'T12:00:00');
       const dow=d.getDay();
@@ -1764,7 +1764,7 @@ function loadAsistenciaFecha(){
   if(diaInfo){
     const colorMap={CTE:'var(--azul2)',SUSPENSION:'var(--morado)',EVALUACION:'var(--amarillo)',VACACIONES:'var(--texto2)',FESTIVO:'var(--rojo)'};
     avisoDiv.innerHTML=`<div style="background:${colorMap[diaInfo.tipo]||'var(--azul)'};color:white;border-radius:var(--radius-sm);padding:12px 16px;font-weight:700;font-size:.82rem;">
-      ⚠️ ${diaInfo.tipo}: ${diaInfo.desc} · Este es un día no escolar o especial.</div>`;
+      ⚠️ ${diaInfo.tipo}: ${diaInfo.descripcion||diaInfo.desc||""} · Este es un día no escolar o especial.</div>`;
     avisoDiv.style.display='block';
   }else{avisoDiv.style.display='none';}
 
@@ -1788,7 +1788,10 @@ function loadAsistenciaFecha(){
 
 function getDiaInfo(fecha,ciclo){
   if(!ciclo||!ciclo.diasEspeciales)return null;
-  return ciclo.diasEspeciales.find(d=>d.fecha===fecha)||null;
+  const d=ciclo.diasEspeciales.find(d=>d.fecha===fecha)||null;
+  if(d&&!d.descripcion&&d.desc)d.descripcion=d.desc;
+  if(d&&!d.desc&&d.descripcion)d.desc=d.descripcion;
+  return d;
 }
 
 function renderResumenDia(){
@@ -2092,7 +2095,7 @@ function renderCalendario(){
     if(esFinde){cls+=' finde';}
     if(ciclo){
       const dinfo=getDiaInfo(fechaStr,ciclo);
-      if(dinfo){cls+=' '+dinfo.tipo;title=dinfo.desc;dot='<div class="dia-dot"></div>';}
+      if(dinfo){cls+=' '+dinfo.tipo;title=dinfo.descripcion||dinfo.desc||'';dot='<div class="dia-dot"></div>';}
       const ausDoc=DB.ausenciasDocente[fechaStr];
       if(ausDoc){cls+=' DOCENTE';title='Ausencia docente';}
     }
