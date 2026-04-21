@@ -1072,13 +1072,24 @@ function loadDB(){try{return JSON.parse(localStorage.getItem(DB_KEY))||getEmptyD
 function getEmptyDB(){return{ciclos:[],alumnos:[],asistencia:{},ausenciasDocente:{},config:{horaRetardo:'08:30',cicloActivo:null}};}
 
 function saveDB(db){
+  // Always save locally first - instant, no blocking
   localStorage.setItem(DB_KEY,JSON.stringify(db));
-  if(fbRef){
-    fbGuardando=true;
-    setSyncStatus('sincronizando');
+  // Then sync to Firebase in background - never blocks UI
+  syncFirebase(db);
+}
+
+function syncFirebase(db){
+  if(!fbRef)return;
+  fbGuardando=true;
+  setSyncStatus('sincronizando');
+  try{
     fbRef.set(JSON.parse(JSON.stringify(db)))
-      .then(()=>{setSyncStatus('conectado');setTimeout(()=>{fbGuardando=false;},2000);})
-      .catch(e=>{setSyncStatus('desconectado');fbGuardando=false;showNotif('⚠️ Error al guardar en nube','error');console.error(e);});
+      .then(()=>{setSyncStatus('conectado');setTimeout(()=>{fbGuardando=false;},1500);})
+      .catch(e=>{setSyncStatus('desconectado');fbGuardando=false;console.error('Firebase sync error:',e);});
+  }catch(e){
+    fbGuardando=false;
+    setSyncStatus('desconectado');
+    console.error('Firebase sync error:',e);
   }
 }
 
@@ -1667,7 +1678,10 @@ function guardarAlumno(){
   }else{
     DB.alumnos.push({id:genId(),nombre,grado,fechaNacimiento:fnac,curp,cicloId,nfcId:genId()});
   }
-  saveDB(DB);closeModal('modal-nuevo-alumno');renderAlumnos();showNotif('✅ Alumno guardado','success');
+  localStorage.setItem(DB_KEY,JSON.stringify(DB));
+  closeModal('modal-nuevo-alumno');renderAlumnos();
+  showNotif('✅ Alumno guardado','success');
+  syncFirebase(DB);
 }
 
 function eliminarAlumno(id){
@@ -1951,9 +1965,13 @@ function guardarAusenciaDocente(){
   const tipo=$('ausencia-doc-tipo').value;
   const nota=$('ausencia-doc-nota').value;
   if(!fecha||!tipo){showNotif('⚠️ Selecciona fecha y tipo','error');return;}
+  if(!DB.ausenciasDocente)DB.ausenciasDocente={};
   DB.ausenciasDocente[fecha]={tipo,nota};
-  saveDB(DB);closeModal('modal-ausencia-docente');loadAsistenciaFecha();
+  localStorage.setItem(DB_KEY,JSON.stringify(DB));
+  closeModal('modal-ausencia-docente');
+  loadAsistenciaFecha();
   showNotif('✅ Situación docente guardada','success');
+  syncFirebase(DB);
 }
 
 function borrarAusenciaDocente(fecha){delete DB.ausenciasDocente[fecha];saveDB(DB);loadAsistenciaFecha();}
@@ -1962,7 +1980,9 @@ function openModalConfigHora(){$('config-hora-retardo').value=DB.config.horaReta
 
 function guardarConfigHora(){
   DB.config.horaRetardo=$('config-hora-retardo').value||'08:30';
-  saveDB(DB);closeModal('modal-config-hora');
+  localStorage.setItem(DB_KEY,JSON.stringify(DB));
+  closeModal('modal-config-hora');
+  syncFirebase(DB);
   $('hora-retardo-display').textContent=DB.config.horaRetardo;
   showNotif('✅ Hora de retardo actualizada','success');
 }
@@ -2080,8 +2100,10 @@ function guardarDiaEspecial(){
   if(!fecha||!tipo||!descripcion||!ciclo){showNotif('⚠️ Completa todos los campos','error');return;}
   if(!ciclo.diasEspeciales)ciclo.diasEspeciales=[];
   ciclo.diasEspeciales.push({fecha,tipo,descripcion});
-  saveDB(DB);closeModal('modal-dia-especial');renderCalendario();renderListaDiasEspeciales();
+  localStorage.setItem(DB_KEY,JSON.stringify(DB));
+  closeModal('modal-dia-especial');renderCalendario();renderListaDiasEspeciales();
   showNotif('✅ Día especial agregado','success');
+  syncFirebase(DB);
 }
 
 function eliminarDiaEspecial(cicloId,idx){
