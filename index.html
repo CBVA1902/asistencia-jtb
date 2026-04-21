@@ -2730,9 +2730,13 @@ function showNFCLanding(nfcId){
   const horaActual=new Date().toTimeString().slice(0,5);
   const horaRetardo=DB.config.horaRetardo||'08:30';
   const esRetardo=horaActual>horaRetardo;
+  if(!DB.asistencia)DB.asistencia={};
   if(!yaRegistrado){
     DB.asistencia[k]={estado:esRetardo?'retardo':'asistencia',hora:horaActual,justificacion:'',nota:'NFC'};
-    saveDB(DB);
+    // Save locally FIRST - instant, no waiting
+    localStorage.setItem(DB_KEY,JSON.stringify(DB));
+    // Then sync Firebase in background
+    syncFirebase(DB);
   }
   const rec=DB.asistencia[k];
   const estadoInfo={asistencia:{icon:'✅',label:'ASISTENCIA PUNTUAL',color:'#1d8a3c',bg:'#d4f5e2'},retardo:{icon:'⏰',label:'RETARDO',color:'#8a6100',bg:'#fff3cd'},inasistencia:{icon:'❌',label:'FALTA',color:'#c0181e',bg:'#fde8e8'},inasistencia_justificada:{icon:'📋',label:'JUSTIFICADA',color:'#e06820',bg:'#ffe5d4'}};
