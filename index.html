@@ -2640,7 +2640,26 @@ function showNFCLanding(nfcId){
   overlay.id='nfc-landing';
   overlay.style.cssText='position:fixed;inset:0;background:linear-gradient(135deg,#1a3a8c,#1e4fc2);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;font-family:Nunito,sans-serif;padding:24px;text-align:center;';
   if(!alumno){
-    overlay.innerHTML=`<div style="font-size:3rem;">⚠️</div><h2 style="font-family:Fredoka One,sans-serif;font-size:1.5rem;margin:12px 0;">Alumno no encontrado</h2><p style="opacity:.8;font-size:.9rem;">El código NFC no corresponde a ningún alumno registrado.</p><button onclick="document.getElementById('nfc-landing').remove();" style="margin-top:20px;padding:12px 24px;border-radius:12px;border:2px solid white;background:transparent;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Abrir App</button>`;
+    // Build alumno selector for assignment
+    const alumnos=(DB.alumnos||[]).sort((a,b)=>a.grado.localeCompare(b.grado)||a.nombre.localeCompare(b.nombre));
+    const opciones=alumnos.map(a=>`<option value="${a.id}">${a.grado}° · ${a.nombre}</option>`).join('');
+    overlay.innerHTML=`
+      <div style="background:rgba(255,255,255,.15);border-radius:20px;padding:28px;max-width:380px;width:100%;text-align:center;">
+        <div style="font-size:2.5rem;margin-bottom:8px;">📡</div>
+        <h2 style="font-family:Fredoka One,sans-serif;font-size:1.2rem;margin-bottom:6px;">Etiqueta NFC nueva</h2>
+        <div style="font-size:.78rem;opacity:.8;margin-bottom:4px;">UID detectado:</div>
+        <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:8px 12px;font-family:monospace;font-size:.82rem;margin-bottom:16px;word-break:break-all;">${nfcId}</div>
+        <div style="font-size:.85rem;font-weight:700;margin-bottom:8px;">¿A qué alumno pertenece esta etiqueta?</div>
+        <select id="sel-asignar-nfc" style="width:100%;padding:10px;border-radius:10px;border:none;font-size:.9rem;margin-bottom:14px;color:#1a2340;">
+          <option value="">— Selecciona un alumno —</option>
+          ${opciones}
+        </select>
+        <div style="display:flex;gap:10px;">
+          <button onclick="asignarEtiquetaNFC('${nfcId}')" style="flex:1;padding:12px;background:#1d8a3c;color:white;border:none;border-radius:12px;font-weight:700;font-size:.9rem;cursor:pointer;">✅ Asignar</button>
+          <button onclick="document.getElementById('nfc-landing').remove();history.replaceState(null,'',location.pathname);" style="padding:12px 16px;background:rgba(255,255,255,.15);color:white;border:2px solid rgba(255,255,255,.4);border-radius:12px;font-weight:700;cursor:pointer;">Cancelar</button>
+        </div>
+        <div style="font-size:.72rem;opacity:.7;margin-top:12px;">Jardín de Niños Jaime Torres Bodet · 30EJN1426K</div>
+      </div>`;
     document.body.appendChild(overlay);return;
   }
   const k=alumno.id+'_'+hoy;
@@ -2673,6 +2692,54 @@ function showNFCLanding(nfcId){
       <button onclick="document.getElementById('nfc-landing').remove();history.replaceState(null,'',location.pathname);" style="margin-top:16px;padding:11px 24px;border-radius:12px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:white;font-size:.9rem;font-weight:700;cursor:pointer;width:100%;">Abrir App completa →</button>
     </div>`;
   document.body.appendChild(overlay);
+}
+
+function asignarEtiquetaNFC(nfcId){
+  const sel=document.getElementById('sel-asignar-nfc');
+  if(!sel||!sel.value){alert('Selecciona un alumno primero');return;}
+  const alumnoId=sel.value;
+  const alumno=DB.alumnos.find(a=>a.id===alumnoId);
+  if(!alumno){alert('Alumno no encontrado');return;}
+  // Assign the NFC UID to this alumno
+  alumno.nfcId=nfcId;
+  // Save locally
+  localStorage.setItem(DB_KEY,JSON.stringify(DB));
+  // Sync to Firebase
+  if(fbRef){
+    fbGuardando=true;
+    fbRef.set(JSON.parse(JSON.stringify(DB)))
+      .then(()=>{setSyncStatus('conectado');setTimeout(()=>{fbGuardando=false;},2000);})
+      .catch(e=>{fbGuardando=false;console.error(e);});
+  }
+  // Remove landing and show success
+  const overlay=document.getElementById('nfc-landing');
+  if(overlay)overlay.remove();
+  history.replaceState(null,'',location.pathname);
+  // Now register attendance
+  const hoy=fechaHoy();
+  const k=alumnoId+'_'+hoy;
+  const horaActual=new Date().toTimeString().slice(0,5);
+  const horaRetardo=(DB.config&&DB.config.horaRetardo)||'08:30';
+  const esRetardo=horaActual>horaRetardo;
+  if(!DB.asistencia)DB.asistencia={};
+  if(!DB.asistencia[k]){
+    DB.asistencia[k]={estado:esRetardo?'retardo':'asistencia',hora:horaActual,justificacion:'',nota:'NFC'};
+    localStorage.setItem(DB_KEY,JSON.stringify(DB));
+    if(fbRef){fbGuardando=true;fbRef.set(JSON.parse(JSON.stringify(DB))).then(()=>{setSyncStatus('conectado');setTimeout(()=>{fbGuardando=false;},2000);}).catch(e=>{fbGuardando=false;});}
+  }
+  // Show success message
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;inset:0;background:linear-gradient(135deg,#1d8a3c,#28a745);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:Nunito,sans-serif;';
+  div.innerHTML=`<div style="text-align:center;color:white;padding:24px;">
+    <div style="font-size:4rem;margin-bottom:12px;">✅</div>
+    <div style="font-family:Fredoka One,sans-serif;font-size:1.4rem;margin-bottom:6px;">¡Etiqueta asignada!</div>
+    <div style="font-size:1rem;font-weight:700;">${alumno.nombre}</div>
+    <div style="font-size:.85rem;opacity:.85;margin-top:4px;">${esRetardo?'⏰ Retardo':'Asistencia puntual'} · ${horaActual}</div>
+    <div style="font-size:.75rem;opacity:.7;margin-top:8px;">La etiqueta quedó vinculada a este alumno</div>
+    <button onclick="this.closest('div[style*=fixed]').remove();" style="margin-top:16px;padding:10px 24px;border-radius:12px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.2);color:white;font-weight:700;cursor:pointer;">Cerrar</button>
+  </div>`;
+  document.body.appendChild(div);
+  setTimeout(()=>{if(div.parentNode)div.remove();},4000);
 }
 
 function handleNFCScan(nfcIdOrData){
