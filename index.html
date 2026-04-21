@@ -1542,7 +1542,19 @@ function guardarCiclo(){
     if(!DB.ciclos)DB.ciclos=[];
     if(editId){
       const idx=DB.ciclos.findIndex(c=>c.id===editId);
-      if(idx>=0){DB.ciclos[idx].nombre=nombre;DB.ciclos[idx].inicio=inicio;DB.ciclos[idx].fin=fin;}
+      if(idx>=0){
+        DB.ciclos[idx].nombre=nombre;
+        DB.ciclos[idx].inicio=inicio;
+        DB.ciclos[idx].fin=fin;
+        if(preset){
+          try{
+            const sepData=getDiasSpecialesSEP(preset);
+            if(sepData&&sepData.especiales){
+              DB.ciclos[idx].diasEspeciales=sepData.especiales.map(e=>({fecha:e.fecha,tipo:e.tipo,descripcion:e.desc}));
+            }
+          }catch(ex){console.warn('Error SEP:',ex);}
+        }
+      }
     }else{
       let diasEspeciales=[];
       try{
